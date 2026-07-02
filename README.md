@@ -4,9 +4,6 @@
 
 Retrace lets you open a local Git repository and explore its commit history visually: drag a timeline scrubber to jump between commits, inspect diffs with a proper side-by-side viewer, and (where the project structure allows it) preview a live rendering of what the site looked like at any point in its history. No uploads, no server, no account.
 
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
-![Status: In development](https://img.shields.io/badge/status-in%20development-orange.svg)
-
 ---
 
 ## Why
@@ -21,21 +18,21 @@ Retrace is a **static, client-only web app** — there is no backend. It uses th
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                        Your browser                      │
-│                                                            │
-│  Local folder  ──▶  File System Access API                │
-│                          │                                │
-│                          ▼                                │
-│                   Web Worker (isomorphic-git)              │
-│                          │                                │
-│                          ▼                                │
-│              Parsed commits / diffs / branches             │
-│                          │                                │
-│              ┌───────────┴───────────┐                    │
-│              ▼                       ▼                    │
-│         IndexedDB cache        React UI (Next.js)          │
-│      (recent repos, commit                                 │
-│       cache, settings)                                      │
+│                        Your browser                     │
+│                                                         │
+│        Local folder ──▶ File System Access API         |
+│                          │                              │
+│                          ▼                              │
+│                   Web Worker (isomorphic-git)           │
+│                          │                              │
+│                          ▼                              │
+│              Parsed commits / diffs / branches          │
+│                          │                              │
+│              ┌───────────┴───────────┐                  │
+│              ▼                       ▼                  │
+│         IndexedDB cache        React UI (Next.js)       │
+│      (recent repos, commit                              │
+│       cache, settings)                                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -85,13 +82,6 @@ Then open `http://localhost:3000` in a Chromium-based browser (Chrome, Edge, or 
 ## Browser support
 
 Retrace depends on the File System Access API, which is currently Chromium-only. It runs in Chrome, Edge, and Arc. Firefox and Safari don't yet implement this API — if you open Retrace in an unsupported browser, you'll see a clear message rather than a silent failure. Broader support is on the roadmap once the API's availability improves.
-
-## Roadmap
-
-- [ ] Clone directly from a GitHub URL (currently: open a local folder or a ZIP export)
-- [ ] Export a timeline as a shareable artifact
-- [ ] Full commit-graph visualization in Branch Explorer
-- [ ] In-browser dev server support (WebContainers-style) for live preview of build-step projects, beyond the current static-only preview scope
 
 ## Project status
 
