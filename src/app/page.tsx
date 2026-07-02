@@ -1,13 +1,10 @@
 "use client";
 
-import { ArrowRight, FolderOpen, Shield, Lock, CloudOff, Clock, Columns, Shuffle, Play, GitBranch, Zap, Globe } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, FolderOpen, Shield, Lock, CloudOff, Clock, Columns, Shuffle, Play, GitBranch, Zap } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { FAQAccordion } from "@/components/FAQAccordion";
-import { RetraceLogo } from "@/lib/logo";
-import { isFileSystemAccessSupported, pickRepository } from "@/lib/browser";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 const FEATURES = [
   { icon: Clock, title: "Visual Timeline", description: "Interactive timeline, every commit a milestone." },
@@ -56,46 +53,24 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-function TwitterIcon({ className }: { className?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-    </svg>
-  );
-}
-
 export default function LandingPage() {
   const router = useRouter();
-  const [browserSupported] = useState(isFileSystemAccessSupported);
 
-  const handleOpenRepo = async () => {
-    if (!browserSupported) {
-      alert("Retrace requires a Chromium-based browser (Chrome, Edge, or Arc). Please switch to a supported browser.");
-      return;
-    }
-    const handle = await pickRepository();
-    if (handle) {
-      router.push("/app");
-    }
-  };
+  const handleTryRetrace = () => router.push("/app");
 
   return (
     <div className="flex flex-col min-h-full">
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <RetraceLogo size={22} />
             <span className="font-bold text-base tracking-tight">Retrace</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
             <a href="#features" className="hover:text-text-primary transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-text-primary transition-colors">How it works</a>
             <a href="#faq" className="hover:text-text-primary transition-colors">FAQ</a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">GitHub</a>
+            <a href="https://github.com/afzanlearns/Retrace" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">GitHub</a>
           </div>
-          <Button onClick={handleOpenRepo} rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Open Repository
-          </Button>
         </div>
       </nav>
 
@@ -106,21 +81,21 @@ export default function LandingPage() {
               <span className="w-2 h-2 rounded-full bg-success mr-2 inline-block" />
               Your code. Your history. Stay local.
             </Badge>
-            <h1 className="text-[40px] leading-[1.1] font-bold tracking-tight text-text-primary mb-5">
+            <h1 className="text-3xl sm:text-[40px] leading-[1.1] font-bold tracking-tight text-text-primary mb-5">
               Time travel through your codebase.
             </h1>
             <p className="text-base text-text-secondary leading-relaxed max-w-md mb-8">
               Open any local Git repository and scrub through its commit history like a video timeline. View diffs, compare commits, and explore your project&apos;s evolution — entirely in your browser, entirely offline.
             </p>
-            <div className="flex items-center gap-3 mb-10">
-              <Button onClick={handleOpenRepo} leftIcon={<FolderOpen className="w-4 h-4" />}>
-                Open Repository
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10 w-full sm:w-auto">
+              <Button onClick={handleTryRetrace} className="w-full sm:w-auto" leftIcon={<FolderOpen className="w-4 h-4" />}>
+                Try it out
               </Button>
-              <Button variant="secondary" leftIcon={<GithubIcon className="w-4 h-4" />}>
+              <Button variant="secondary" className="w-full sm:w-auto" leftIcon={<GithubIcon className="w-4 h-4" />} onClick={() => window.open("https://github.com/afzanlearns/Retrace", "_blank", "noopener noreferrer")}>
                 View on GitHub
               </Button>
             </div>
-            <div className="flex items-center gap-6 text-xs text-text-tertiary">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-text-tertiary">
               <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> 100% Local</span>
               <span className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Private &amp; Secure</span>
               <span className="flex items-center gap-1.5"><CloudOff className="w-3.5 h-3.5" /> No Uploads</span>
@@ -180,7 +155,24 @@ export default function LandingPage() {
                 </div>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className={`flex-1 h-14 rounded-md ${i === 4 ? "ring-2 ring-accent" : ""} bg-surface-secondary border border-border`} />
+                    <div
+                      key={i}
+                      className={`flex-1 rounded-md overflow-hidden ${i === 4 ? "ring-2 ring-accent" : ""} bg-surface-secondary border border-border`}
+                    >
+                      <svg viewBox="0 0 60 56" className="w-full h-full">
+                        <rect x="0" y="0" width="60" height="10" rx="2" fill="#E7E5E4" />
+                        <circle cx="8" cy="5" r="1.5" fill="#DC2626" opacity="0.7" />
+                        <circle cx="13" cy="5" r="1.5" fill="#EAB308" opacity="0.7" />
+                        <circle cx="18" cy="5" r="1.5" fill="#16A34A" opacity="0.7" />
+                        <rect x="26" y="3" width="14" height="4" rx="1" fill="#A1A1AA" opacity="0.4" />
+                        <rect x="4" y="14" width="52" height="4" rx="1" fill="#A1A1AA" opacity="0.2" />
+                        <rect x="4" y="21" width="38" height="4" rx="1" fill="#A1A1AA" opacity="0.15" />
+                        <rect x="4" y="28" width="42" height="4" rx="1" fill="#A1A1AA" opacity="0.2" />
+                        <rect x="4" y="35" width="28" height="4" rx="1" fill="#A1A1AA" opacity="0.15" />
+                        <rect x="4" y="42" width="52" height="4" rx="1" fill="#A1A1AA" opacity="0.2" />
+                        <rect x="4" y="49" width="32" height="4" rx="1" fill="#A1A1AA" opacity="0.15" />
+                      </svg>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -192,14 +184,14 @@ export default function LandingPage() {
       <section id="features" className="border-t border-border bg-surface-secondary/50">
         <div className="max-w-7xl mx-auto px-6 py-20 md:py-28">
           <div className="text-center mb-16">
-            <h2 className="text-[32px] leading-[1.2] font-bold tracking-tight text-text-primary mb-3">
+            <h2 className="text-2xl sm:text-[32px] leading-[1.2] font-bold tracking-tight text-text-primary mb-3">
               Everything you need to understand your project
             </h2>
             <p className="text-text-secondary text-base max-w-lg mx-auto">
               Explore your repository&apos;s history with powerful tools designed for developers.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map(({ icon: Icon, title, description }) => (
               <div key={title} className="bg-surface border border-border rounded-xl p-6 hover:shadow-sm transition-shadow">
                 <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center mb-4">
@@ -217,11 +209,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 py-20 md:py-28">
           <div className="text-center mb-16">
             <p className="text-eyebrow text-accent mb-3">How it works</p>
-            <h2 className="text-[32px] leading-[1.2] font-bold tracking-tight text-text-primary">
+            <h2 className="text-2xl sm:text-[32px] leading-[1.2] font-bold tracking-tight text-text-primary">
               Explore your repository in 3 simple steps
             </h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               {[
                 { num: 1, title: "Open your repository", desc: "Choose a local Git repo, everything stays local." },
@@ -283,14 +275,14 @@ export default function LandingPage() {
       <section id="faq" className="border-t border-border bg-surface-secondary/50">
         <div className="max-w-7xl mx-auto px-6 py-20 md:py-28">
           <div className="text-center mb-16">
-            <h2 className="text-[32px] leading-[1.2] font-bold tracking-tight text-text-primary mb-3">
+            <h2 className="text-2xl sm:text-[32px] leading-[1.2] font-bold tracking-tight text-text-primary mb-3">
               Frequently asked questions
             </h2>
             <p className="text-text-secondary text-base">
               Everything you need to know about Retrace.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <FAQAccordion items={FAQ_ITEMS_LEFT} />
             <FAQAccordion items={FAQ_ITEMS_RIGHT} />
           </div>
@@ -299,62 +291,56 @@ export default function LandingPage() {
 
       <section className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-16 md:py-20">
-          <div className="bg-dark-surface rounded-2xl p-10 md:p-14 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
+          <div className="bg-dark-surface rounded-2xl py-12 px-6 md:py-16 md:px-12 text-center flex flex-col items-center justify-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
               Ready to explore your code history?
             </h2>
-            <Button onClick={handleOpenRepo} className="bg-white text-dark-surface hover:bg-white/90" rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Open Repository
+            <p className="text-text-tertiary text-sm md:text-base max-w-lg mb-8">
+              Open a local repository and start exploring in seconds — no signup, no upload.
+            </p>
+            <Button
+              onClick={handleTryRetrace}
+              variant="secondary"
+              className="bg-white text-text-primary hover:bg-white/90 border-transparent font-medium shadow-sm transition-all"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              Try it out
             </Button>
           </div>
         </div>
       </section>
 
       <footer className="border-t border-border bg-surface">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
+        <div className="max-w-7xl mx-auto px-6 pt-16 pb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+            <div className="md:col-span-2 pr-0 md:pr-12">
               <div className="flex items-center gap-2 mb-3">
-                <RetraceLogo size={20} />
-                <span className="font-bold text-sm">Retrace</span>
+                <span className="font-bold text-lg tracking-tight text-text-primary">Retrace</span>
               </div>
-              <p className="text-xs text-text-tertiary mb-4">Time travel through your codebase.</p>
-              <div className="flex gap-3">
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" aria-label="GitHub">
+              <p className="text-sm text-text-secondary mb-5 max-w-sm">Time travel through your codebase.</p>
+              <div className="flex">
+                <a
+                  href="https://github.com/afzanlearns/Retrace"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full bg-surface-secondary flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-border transition-all"
+                  aria-label="GitHub"
+                >
                   <GithubIcon className="w-4 h-4" />
-                </a>
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" aria-label="Twitter / X">
-                  <TwitterIcon className="w-4 h-4" />
-                </a>
-                <a href="#" className="text-text-tertiary hover:text-text-primary transition-colors" aria-label="Website">
-                  <Globe className="w-4 h-4" />
                 </a>
               </div>
             </div>
             <div>
               <h4 className="text-xs font-semibold text-text-primary mb-4 uppercase tracking-wider">Product</h4>
               <div className="space-y-3 text-sm text-text-secondary">
-                <a href="#features" className="block hover:text-text-primary">Features</a>
-                <a href="#how-it-works" className="block hover:text-text-primary">How it works</a>
-                <a href="#faq" className="block hover:text-text-primary">FAQ</a>
+                <a href="#features" className="block hover:text-text-primary transition-colors">Features</a>
+                <a href="#how-it-works" className="block hover:text-text-primary transition-colors">How it works</a>
+                <a href="#faq" className="block hover:text-text-primary transition-colors">FAQ</a>
+                <a href="https://github.com/afzanlearns/Retrace" target="_blank" rel="noopener noreferrer" className="block hover:text-text-primary transition-colors">GitHub</a>
               </div>
-            </div>
-            <div>
-              <h4 className="text-xs font-semibold text-text-primary mb-4 uppercase tracking-wider">Resources</h4>
-              <div className="space-y-3 text-sm text-text-secondary">
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="block hover:text-text-primary">GitHub</a>
-                <a href="#" className="block hover:text-text-primary">Privacy</a>
-                <a href="#" className="block hover:text-text-primary">Terms</a>
-              </div>
-            </div>
-            <div className="bg-dark-surface rounded-xl p-6">
-              <h3 className="text-base font-semibold text-white mb-2">Ready to explore your code history?</h3>
-              <Button onClick={handleOpenRepo} className="bg-white text-dark-surface hover:bg-white/90 mt-2" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Open Repository
-              </Button>
             </div>
           </div>
-          <div className="border-t border-border mt-10 pt-6 text-center text-xs text-text-tertiary">
+          <div className="border-t border-border mt-16 pt-8 text-center text-xs text-text-tertiary">
             &copy; {new Date().getFullYear()} Retrace. All rights reserved.
           </div>
         </div>
