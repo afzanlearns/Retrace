@@ -83,10 +83,6 @@ Then open `http://localhost:3000` in a Chromium-based browser (Chrome, Edge, or 
 
 Retrace depends on the File System Access API, which is currently Chromium-only. It runs in Chrome, Edge, and Arc. Firefox and Safari don't yet implement this API — if you open Retrace in an unsupported browser, you'll see a clear message rather than a silent failure. Broader support is on the roadmap once the API's availability improves.
 
-## Project status
-
-Built in three phases: (1) app shell, marketing page, repository-opening flow; (2) the git parsing engine and core commit history / diff experience; (3) live preview, replay mode, branch explorer, and polish. See [`retrace-build-prompt.md`](./retrace-build-prompt.md) for the full internal build spec.
-
 ## License
 
 MIT
