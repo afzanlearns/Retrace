@@ -62,7 +62,7 @@ export function TimelineScrubber({
 
   return (
     <div className="border-t border-border bg-surface">
-      <div className="flex items-center gap-3 px-4 py-2">
+      <div className="flex items-center gap-3 px-4 py-2 flex-wrap">
         <div className="flex items-center gap-1">
           <Button
             variant="icon"
