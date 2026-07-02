@@ -389,6 +389,19 @@ async function computeCommitDiff(
   return files;
 }
 
+function ensureSha(sha: unknown, label: string): string {
+  if (typeof sha === "string") return sha;
+  if (sha instanceof Uint8Array || Array.isArray(sha)) {
+    const hex = Array.from(sha as Uint8Array)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    console.warn(`SHA was not a string for ${label}, converted from buffer (${typeof sha})`);
+    return hex;
+  }
+  console.error(`Unexpected SHA type for ${label}:`, typeof sha, sha);
+  return String(sha);
+}
+
 function send(msg: WorkerOutMessage) {
   self.postMessage(msg);
 }
@@ -428,11 +441,15 @@ async function walkCommits(
     let deletions = 0;
     let changedFiles = 0;
 
-    if (commitData.parent.length > 0) {
+    const ensureParentShas = (commitData.parent || []).map((p: unknown) =>
+      ensureSha(p, `commit ${sha.slice(0, 7)} parent`)
+    );
+
+    if (ensureParentShas.length > 0) {
       try {
         const diffFiles = await computeCommitDiff(
           fsAdapter,
-          commitData.parent[0],
+          ensureParentShas[0],
           sha
         );
         for (const f of diffFiles) {
@@ -444,12 +461,12 @@ async function walkCommits(
     }
 
     commits.push({
-      sha,
+      sha: ensureSha(sha, `commit oid`),
       message: commitData.message.split("\n")[0] || commitData.message,
       author: commitData.author.name,
       authorEmail: commitData.author.email,
       timestamp: commitData.author.timestamp * 1000,
-      parentShas: commitData.parent,
+      parentShas: ensureParentShas,
       branch: currentBranch || "unknown",
       additions,
       deletions,
@@ -679,6 +696,7 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
       }
     }
   } catch (err) {
+    console.error("Worker error:", err);
     const message = err instanceof Error ? err.message : String(err);
     send({ type: "error", message });
   }
