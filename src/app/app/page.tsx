@@ -1,38 +1,95 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, FolderOpen, Link, Upload, Lock, Search, HelpCircle, Menu } from "lucide-react";
+import { ArrowRight, FolderOpen, Link, Upload, Lock } from "lucide-react";
 import { Button } from "@/components/Button";
 import { pickRepository } from "@/lib/browser";
+import { useSidebar } from "@/app/app/layout";
+import { useRepo } from "@/lib/repo-context";
+import { addRecentRepo } from "@/lib/db";
 
 export default function AppHome() {
   const router = useRouter();
+  const { toggle } = useSidebar();
+  const { setRepo } = useRepo();
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const processHandle = useCallback(
+    async (handle: FileSystemDirectoryHandle) => {
+      const repoId = `${handle.name}_${Date.now()}`;
+      setRepo(handle, repoId, handle.name);
+      await addRecentRepo({
+        id: repoId,
+        name: handle.name,
+        path: handle.name,
+        lastOpened: Date.now(),
+        commitCount: 0,
+        handle,
+      });
+      router.push("/app/workspace");
+    },
+    [router, setRepo]
+  );
 
   const handleOpenRepo = async () => {
     const handle = await pickRepository();
     if (handle) {
-      router.push("/app/workspace");
+      processHandle(handle);
     }
   };
 
-  return (
-    <div className="flex flex-col flex-1">
-      <div className="flex items-center justify-end gap-2 px-6 py-3 border-b border-border">
-        <span className="flex items-center gap-1.5 text-xs text-text-tertiary bg-surface-secondary border border-border rounded-md px-2.5 py-1.5">
-          <Search className="w-3 h-3" />
-          <span className="hidden sm:inline">Press </span>
-          <kbd className="font-mono text-[10px] bg-surface border border-border rounded px-1 py-0.5">⌘K</kbd>
-          <span className="hidden sm:inline"> to search</span>
-        </span>
-        <Button variant="icon" aria-label="Help">
-          <HelpCircle className="w-4 h-4" />
-        </Button>
-        <Button variant="icon" aria-label="Menu">
-          <Menu className="w-4 h-4" />
-        </Button>
-      </div>
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16">
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const items = Array.from(e.dataTransfer.items);
+      for (const item of items) {
+        if (item.kind === "file") {
+          let entry: FileSystemFileHandle | FileSystemDirectoryHandle | null = null;
+          if ("getAsFileSystemHandle" in item) {
+            try {
+              const handle = await (item as any).getAsFileSystemHandle();
+              if (handle && handle.kind === "directory") {
+                await processHandle(handle as FileSystemDirectoryHandle);
+                return;
+              }
+            } catch {}
+          } else if ((item as any).webkitGetAsEntry) {
+            const webkitEntry = (item as any).webkitGetAsEntry();
+            if (webkitEntry && webkitEntry.isDirectory) {
+              const handle = await (window as any).showDirectoryPicker?.();
+              if (handle) {
+                await processHandle(handle);
+                return;
+              }
+            }
+          }
+        }
+      }
+    },
+    [processHandle]
+  );
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 overflow-y-auto min-h-0">
         <svg
           width="160"
           height="120"
@@ -56,7 +113,7 @@ export default function AppHome() {
           Select a local Git repository to travel through its history.
         </p>
 
-        <div className="grid sm:grid-cols-3 gap-4 max-w-2xl w-full mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full mb-6">
           <button
             onClick={handleOpenRepo}
             className="border border-border rounded-xl p-5 text-left hover:bg-surface-secondary transition-colors group"
@@ -94,10 +151,20 @@ export default function AppHome() {
           </div>
         </div>
 
-        <div className="w-full max-w-2xl border-2 border-dashed border-border rounded-xl p-8 text-center hover:bg-surface-secondary/50 transition-colors cursor-pointer mb-8">
+        <div
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`w-full max-w-2xl border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer mb-8 ${
+            isDragOver
+              ? "border-accent bg-accent/5"
+              : "border-border hover:bg-surface-secondary/50"
+          }`}
+        >
           <FolderOpen className="w-8 h-8 text-text-tertiary mx-auto mb-3" />
           <p className="text-sm font-medium text-text-primary mb-1">
-            Or drag and drop a folder or ZIP file here
+            Or drag and drop a folder here
           </p>
           <p className="text-xs text-text-tertiary">We&apos;ll handle the rest.</p>
         </div>
