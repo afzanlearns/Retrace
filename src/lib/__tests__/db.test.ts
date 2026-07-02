@@ -59,13 +59,13 @@ describe("recentRepos", () => {
 
   it("preserves settings when clearing recent repos", async () => {
     await addRecentRepo(testRepo);
-    await saveSettings({ theme: "dark", autoplay: false, loop: true, speed: 2 });
+    await saveSettings({ theme: "light", autoplay: false, loop: true, speed: 2 });
     await clearAllData();
     const repos = await getRecentRepos();
     expect(repos).toHaveLength(0);
     const settings = await getSettings();
     expect(settings).toBeDefined();
-    expect(settings!.theme).toBe("dark");
+    expect(settings!.autoplay).toBe(false);
   });
 });
 

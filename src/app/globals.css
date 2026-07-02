@@ -13,19 +13,6 @@
   --color-success: #16A34A;
   --color-danger: #DC2626;
   --color-dark-surface: #18181B;
-
-  --color-dark-background: #0A0A0B;
-  --color-dark-surface: #18181B;
-  --color-dark-surface-secondary: #27272A;
-  --color-dark-border: #3F3F46;
-  --color-dark-text-primary: #FAFAFA;
-  --color-dark-text-secondary: #A1A1AA;
-  --color-dark-text-tertiary: #71717A;
-  --color-dark-accent: #60A5FA;
-  --color-dark-accent-hover: #93C5FD;
-  --color-dark-success: #4ADE80;
-  --color-dark-danger: #F87171;
-
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
@@ -49,11 +36,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  .dark body,
-  body.dark {
-    background: var(--color-dark-background);
-    color: var(--color-dark-text-primary);
-  }
 }
 
 @utility text-eyebrow {

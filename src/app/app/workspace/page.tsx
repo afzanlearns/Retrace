@@ -19,8 +19,6 @@ import {
   FolderOpen,
   FileText,
   GitCompare,
-  Sun,
-  Moon,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/Button";
@@ -31,10 +29,9 @@ import { TimelineScrubber } from "@/components/TimelineScrubber";
 import { BranchExplorer } from "@/components/BranchExplorer";
 import { FileTreeView } from "@/components/FileTreeView";
 import { CompareView } from "@/components/CompareView";
-import { RetraceLogo } from "@/lib/logo";
 import { useRepo } from "@/lib/repo-context";
 import { useDiff } from "@/hooks/useDiff";
-import { useTheme } from "@/lib/theme";
+
 import { getGitService } from "@/workers/git-service";
 import { formatRelativeTime } from "@/lib/utils";
 import {
@@ -49,7 +46,6 @@ import type { WorkerProgress } from "@/workers/types";
 export default function WorkspacePage() {
   const router = useRouter();
   const { handle, repoId, repoName, commits, setCommits, clearRepo } = useRepo();
-  const { theme, toggleTheme } = useTheme();
   const { diffFiles, diffLoading, diffError, loadDiff } = useDiff();
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -112,6 +108,7 @@ export default function WorkspacePage() {
         setStats((prev) => ({ ...prev, commitCount: result.length }));
         loadBranches();
       } catch (err) {
+        console.error("Failed to load repository:", err);
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
         }
@@ -277,11 +274,10 @@ export default function WorkspacePage() {
   ];
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      <aside className="w-[300px] flex-shrink-0 border-r border-border bg-surface flex flex-col overflow-hidden" role="navigation" aria-label="Workspace sidebar">
+    <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+      <aside className="w-full md:w-[300px] flex-shrink-0 border-b md:border-r border-border bg-surface flex flex-col overflow-hidden" role="navigation" aria-label="Workspace sidebar">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-1">
-            <RetraceLogo size={18} />
             <span className="font-bold text-xs tracking-tight">Retrace</span>
           </div>
           <button className="w-full flex items-center gap-2 text-left py-1.5 px-2 rounded-md hover:bg-surface-secondary transition-colors">
@@ -423,12 +419,6 @@ export default function WorkspacePage() {
             <p className="text-eyebrow text-text-tertiary">Settings</p>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-text-primary">Theme</span>
-                <Button variant="icon" onClick={toggleTheme} aria-label="Toggle theme">
-                  {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-sm text-text-primary">Autoplay</span>
                 <button
                   onClick={() => setAutoplay(!autoplay)}
@@ -547,8 +537,8 @@ export default function WorkspacePage() {
             </div>
           ) : diffFiles && diffFiles.length > 0 ? (
             viewMode === "split" ? (
-              <div className="grid grid-cols-2 gap-0 h-full">
-                <div className="border-r border-border pr-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-0 h-full">
+                <div className="md:border-r border-border md:pr-6">
                   <p className="text-eyebrow text-text-tertiary mb-3">Before This Commit</p>
                   <div className="border border-border rounded-lg overflow-hidden mb-4">
                     <div className="flex items-center gap-2 px-3 py-2 bg-surface-secondary/50 border-b border-border">
