@@ -253,6 +253,7 @@ async function computeCommitDiff(
         return results;
       }) as WalkerIterate,
     }).then(async (changedFiles: unknown[]) => {
+      console.log(`[computeCommitDiff] commitSha=${commitSha.slice(0,7)} parentSha=${parentSha.slice(0,7)} raw changedFiles:`, JSON.stringify(changedFiles));
       for (const file of (changedFiles || []) as { path: string; type: string }[]) {
         if (!file) continue;
 
