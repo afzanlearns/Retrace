@@ -671,15 +671,26 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         }
 
         const commit = await git.readCommit({ fs, dir: "/", oid: msg.commitSha });
-        const tree = await git.readTree({ fs, dir: "/", oid: commit.commit.tree });
+        const treeOid = ensureSha(commit.commit.tree, "commit tree");
+        const entries: FileTreeEntry[] = [];
 
-        const entries: FileTreeEntry[] = tree.tree
-          .filter((e: { type: string }) => e.type === "blob" || e.type === "tree")
-          .map((e: Record<string, unknown>) => ({
-            name: String(e.path || "").split("/").pop() || String(e.path || ""),
-            path: String(e.path || ""),
-            type: (e.type === "tree" ? "tree" : "blob") as "blob" | "tree",
-          }));
+        async function walk(tOid: string, prefix: string): Promise<void> {
+          const treeResult = await git.readTree({ fs: fs!, dir: "/", oid: tOid });
+          for (const entry of treeResult.tree) {
+            const path = prefix ? `${prefix}/${entry.path}` : entry.path;
+            entries.push({
+              name: entry.path.split("/").pop() || entry.path,
+              path,
+              type: (entry.type === "tree" ? "tree" : "blob") as "blob" | "tree",
+            });
+            if (entry.type === "tree") {
+              const subOid = ensureSha(entry.oid, `tree ${entry.path}`);
+              await walk(subOid, path);
+            }
+          }
+        }
+
+        await walk(treeOid, "");
 
         entries.sort((a, b) => {
           if (a.type !== b.type) return a.type === "tree" ? -1 : 1;
