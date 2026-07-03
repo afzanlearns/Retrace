@@ -23,7 +23,6 @@ import {
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { RepoProvider, useRepo } from "@/lib/repo-context";
 import { Button } from "@/components/Button";
-import { RetraceLogo } from "@/lib/logo";
 import { useRecentRepos } from "@/hooks/useRecentRepos";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -39,7 +38,7 @@ export function useSidebar() {
 function AppShellContent({ children }: { children: ReactNode }) {
   const router = useRouter();
   useTheme();
-  const { repos, removeRepo, refresh } = useRecentRepos();
+  const { repos, removeRepo } = useRecentRepos();
   const { setRepo, requestAccess } = useRepo();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -96,7 +95,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
           <div className="p-4 border-b border-border">
             <Link
               href="/"
-              className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 mb-4 no-underline text-text-primary hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm"
             >
               <span className="font-bold text-sm tracking-tight">Retrace</span>
             </Link>

@@ -15,7 +15,7 @@ interface CodeDiffPanelProps {
 }
 
 export function CodeDiffPanel({ lines, fileName }: CodeDiffPanelProps) {
-  if (!lines.length) {
+  if (!lines?.length) {
     return (
       <div className="p-6 text-center text-text-tertiary text-sm">
         No changes to display

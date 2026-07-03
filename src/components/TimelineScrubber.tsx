@@ -50,7 +50,7 @@ export function TimelineScrubber({
   const [zoom, setZoom] = useState(1);
   const speeds = [1, 2, 4];
 
-  if (!commits.length) return null;
+  if (!commits?.length) return null;
 
   const maxThumbnails = Math.min(commits.length, Math.floor(12 * zoom));
   const step = Math.max(1, Math.floor(commits.length / maxThumbnails));
