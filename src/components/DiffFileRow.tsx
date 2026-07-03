@@ -12,8 +12,8 @@ export function DiffFileRow({ filename, additions, deletions }: DiffFileRowProps
 
   return (
     <div className="flex items-center gap-3 py-1.5 px-3 hover:bg-surface-secondary rounded-md transition-colors cursor-pointer group">
-      <span className="font-mono text-sm text-text-primary flex-1 truncate">
-        {truncateMiddle(filename, 60)}
+      <span className="font-mono text-sm text-text-primary flex-1 min-w-0 truncate" title={filename}>
+        {truncateMiddle(filename, 60) || "unknown file"}
       </span>
       <span className="text-xs font-medium text-success tabular-nums">
         +{additions}

@@ -11,8 +11,6 @@ import {
   SkipBack,
   SkipForward,
   Clock,
-  Eye,
-  MoreHorizontal,
   Code2,
   Columns,
   Settings as SettingsIcon,
@@ -106,6 +104,7 @@ export default function WorkspacePage() {
   const replayRef = useRef<number | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const commitsRef = useRef(commits);
+
 
   useEffect(() => {
     commitsRef.current = commits;
@@ -341,15 +340,13 @@ export default function WorkspacePage() {
               <p className="text-eyebrow text-text-tertiary mb-2">Commit History</p>
             </div>
             <div className="flex-1 overflow-hidden">
-              <div style={{ height: "calc(100vh - 550px)" }}>
-                <List<CommitRowData>
-                  rowCount={commits.length}
-                  rowHeight={64}
-                  style={{ height: "100%", width: "100%" }}
-                  rowComponent={CommitRow}
-                  rowProps={{ commits, selectedIndex, onSelect: setSelectedIndex }}
-                />
-              </div>
+              <List<CommitRowData>
+                rowCount={commits.length}
+                rowHeight={64}
+                style={{ height: "100%", width: "100%" }}
+                rowComponent={CommitRow}
+                rowProps={{ commits, selectedIndex, onSelect: setSelectedIndex }}
+              />
             </div>
             <div className="p-3 border-t border-border">
               <div className="grid grid-cols-3 gap-2 text-center mb-4">
@@ -540,8 +537,7 @@ export default function WorkspacePage() {
                 Diff View
               </button>
             </div>
-            <Button variant="icon" aria-label="Export"><Eye className="w-4 h-4" /></Button>
-            <Button variant="icon" aria-label="More"><MoreHorizontal className="w-4 h-4" /></Button>
+
           </div>
         </div>
 
