@@ -644,10 +644,10 @@ export default function WorkspacePage() {
           ) : diffFiles && diffFiles.length > 0 ? (
             viewMode === "split" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-0 h-full">
-                <div className="md:border-r border-border md:pr-6">
+                <div className="flex flex-col h-full md:border-r border-border md:pr-6">
                   <p className="text-eyebrow text-text-tertiary mb-3">Before This Commit</p>
-                  <div className="border border-border rounded-lg overflow-hidden mb-4">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-surface-secondary/50 border-b border-border">
+                  <div className="flex-1 border border-border rounded-lg overflow-hidden mb-4 flex flex-col">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-surface-secondary/50 border-b border-border flex-shrink-0">
                       <div className="flex gap-1">
                         <div className="w-2.5 h-2.5 rounded-full bg-danger/70" />
                         <div className="w-2.5 h-2.5 rounded-full bg-[#EAB308]/70" />
@@ -658,10 +658,10 @@ export default function WorkspacePage() {
                     <PreviewFrame
                       srcdoc={previewHtml}
                       title="Live preview before commit"
-                      className="bg-white"
+                      className="bg-white flex-1"
                     />
                   </div>
-                  <div className="border border-border rounded-lg p-4">
+                  <div className="border border-border rounded-lg p-4 flex-shrink-0">
                     <p className="text-eyebrow text-text-tertiary mb-2">Commit Message</p>
                     <p className="text-sm text-text-primary">
                       {currentCommit.parentShas?.length > 0
@@ -670,10 +670,10 @@ export default function WorkspacePage() {
                     </p>
                   </div>
                 </div>
-                <div className="pl-6">
+                <div className="flex flex-col h-full pl-6">
                   <p className="text-eyebrow text-text-tertiary mb-3">After This Commit</p>
-                  <div className="border border-border rounded-lg overflow-hidden mb-4">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-surface-secondary/50 border-b border-border">
+                  <div className="flex-1 border border-border rounded-lg overflow-hidden mb-4 flex flex-col">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-surface-secondary/50 border-b border-border flex-shrink-0">
                       <div className="flex gap-1">
                         <div className="w-2.5 h-2.5 rounded-full bg-danger/70" />
                         <div className="w-2.5 h-2.5 rounded-full bg-[#EAB308]/70" />
@@ -684,10 +684,10 @@ export default function WorkspacePage() {
                     <PreviewFrame
                       srcdoc={previewHtml}
                       title="Live preview after commit"
-                      className="bg-white"
+                      className="bg-white flex-1"
                     />
                   </div>
-                  <div className="border border-border rounded-lg p-4">
+                  <div className="border border-border rounded-lg p-4 flex-shrink-0">
                     <p className="text-eyebrow text-text-tertiary mb-2">Changed Files ({diffFiles.length})</p>
                     <div className="space-y-1">
                       {diffFiles.map((file) => (

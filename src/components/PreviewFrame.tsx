@@ -13,8 +13,8 @@ interface PreviewFrameProps {
 
 export function PreviewFrame({ srcdoc, title, className }: PreviewFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [containerSize, setContainerSize] = useState({ width: INTRINSIC_WIDTH, height: INTRINSIC_HEIGHT });
+  const [scale, setScale] = useState(0);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     const el = containerRef.current;
