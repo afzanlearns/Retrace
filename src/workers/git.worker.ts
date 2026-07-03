@@ -696,34 +696,45 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           return;
         }
 
+        const fsAdapter = fs;
+        const commitSha = msg.commitSha;
         const serveFiles: ServeFile[] = [];
 
         try {
-          await git.walk({
-            fs,
-            dir: "/",
-            trees: [ TREE({ ref: msg.commitSha }) ],
-            map: async (filepath, [entry]) => {
-              if (!entry) return null;
-              if ((await entry.type()) !== "blob") return null;
-              const content = await entry.content();
-              if (!content) return null;
-              serveFiles.push({ path: filepath, content: Array.from(content) });
-              return null;
-            },
-            reduce: async (_parent, children) =>
-              (children as unknown[]).flat(Infinity).filter(Boolean),
-            iterate: (async (walk, children) => {
-              const results = [];
-              for await (const child of children) {
-                results.push(await walk(child));
-              }
-              return results;
-            }) as WalkerIterate,
-          });
-        } catch {}
+          const commit = await git.readCommit({ fs: fsAdapter, dir: "/", oid: commitSha });
+          const treeOid = ensureSha(commit.commit.tree, "commit tree");
 
-        send({ type: "serveFiles", files: serveFiles, commitSha: msg.commitSha }, requestId);
+          async function collectBlobs(tOid: string, prefix: string): Promise<void> {
+            const tree = await git.readTree({ fs: fsAdapter, dir: "/", oid: tOid });
+            console.log(`[serveCommit] readTree entries=${tree.tree.length}`);
+            for (const entry of tree.tree) {
+              const path = prefix ? `${prefix}/${entry.path}` : entry.path;
+              if (entry.type === "blob") {
+                try {
+                  const blob = await git.readBlob({
+                    fs: fsAdapter,
+                    dir: "/",
+                    oid: commitSha,
+                    filepath: path,
+                  });
+                  serveFiles.push({ path, content: Array.from(blob.blob) });
+                } catch (e) {
+                  console.log(`[serveCommit] readBlob failed for ${path}: ${e instanceof Error ? e.message : String(e)}`);
+                }
+              } else if (entry.type === "tree") {
+                const subOid = ensureSha(entry.oid, `tree ${entry.path}`);
+                await collectBlobs(subOid, path);
+              }
+            }
+          }
+
+          await collectBlobs(treeOid, "");
+          console.log(`[serveCommit] total files collected: ${serveFiles.length}`);
+        } catch (e) {
+          console.error(`[serveCommit] error: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        send({ type: "serveFiles", files: serveFiles, commitSha }, requestId);
         break;
       }
     }

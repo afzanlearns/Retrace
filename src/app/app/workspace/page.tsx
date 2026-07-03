@@ -101,6 +101,7 @@ export default function WorkspacePage() {
   const [autoplay, setAutoplay] = useState(true);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewAvailable, setPreviewAvailable] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [isImmersive, setIsImmersive] = useState(false);
   const [stats, setStats] = useState({
     commitCount: 0,
@@ -178,6 +179,7 @@ export default function WorkspacePage() {
 
   async function checkPreview(sha: string) {
     console.log(`[preview] checkPreview called for sha=${sha.slice(0,7)}`);
+    setPreviewError(null);
     try {
       const service = getGitService();
       const tree = await service.getFileTree(sha);
@@ -189,6 +191,13 @@ export default function WorkspacePage() {
       if (available && viewMode === "split") {
         const files = await service.serveCommit(sha);
         console.log(`[preview] serveCommit returned ${files.length} files`);
+
+        if (files.length === 0) {
+          setPreviewError("Something went wrong loading the preview for this commit.");
+          setPreviewHtml(null);
+          return;
+        }
+
         const fileMap = new Map<string, Uint8Array>();
         for (const f of files) {
           fileMap.set(f.path, new Uint8Array(f.content));
@@ -204,14 +213,25 @@ export default function WorkspacePage() {
         if (entryPoint) {
           const html = buildPreviewHtml(entryPoint, fileMap);
           console.log(`[preview] htmlLen=${html.length} hasGameClass=${html.includes("class Game") || html.includes("function Game")}`);
+          setPreviewError(null);
           setPreviewHtml(html);
+        } else {
+          setPreviewError("Could not find an HTML entry point for this commit.");
         }
       }
     } catch (e) {
       console.log(`[preview] ERROR: ${e instanceof Error ? e.message : String(e)}`);
+      setPreviewError("Something went wrong loading the preview for this commit.");
       setPreviewAvailable(false);
     }
   }
+
+  const retryPreview = useCallback(() => {
+    if (selectedCommit) {
+      checkPreview(selectedCommit.sha);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCommit?.sha, viewMode]);
 
   useEffect(() => {
     console.log(`[preview] useEffect fired selectedCommit=${selectedCommit?.sha?.slice(0,7) || "null"}`);
@@ -336,6 +356,8 @@ export default function WorkspacePage() {
           </div>
           <PreviewFrame
             srcdoc={previewHtml}
+            error={previewError}
+            onRetry={retryPreview}
             title={`Live preview ${isBefore ? "before" : "after"} commit`}
             className="bg-white flex-1"
           />
@@ -684,6 +706,8 @@ export default function WorkspacePage() {
                     </div>
                     <PreviewFrame
                       srcdoc={previewHtml}
+                      error={previewError}
+                      onRetry={retryPreview}
                       title="Live preview before commit"
                       className="bg-white flex-1"
                     />
@@ -710,6 +734,8 @@ export default function WorkspacePage() {
                     </div>
                     <PreviewFrame
                       srcdoc={previewHtml}
+                      error={previewError}
+                      onRetry={retryPreview}
                       title="Live preview after commit"
                       className="bg-white flex-1"
                     />
