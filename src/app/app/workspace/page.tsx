@@ -41,7 +41,45 @@ import {
   createBlobUrl,
 } from "@/lib/preview";
 import { wipeDatabase } from "@/lib/db";
-import type { WorkerProgress } from "@/workers/types";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import type { CommitData, WorkerProgress } from "@/workers/types";
+
+interface CommitRowData {
+  commits: CommitData[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}
+
+function CommitRow({
+  index,
+  style,
+  commits,
+  selectedIndex,
+  onSelect,
+}: { index: number; style: React.CSSProperties; commits: CommitData[]; selectedIndex: number; onSelect: (index: number) => void }) {
+  const commit = commits[index];
+  const isSelected = index === selectedIndex;
+  return (
+    <div style={style}>
+      <button
+        onClick={() => onSelect(index)}
+        className={`w-full text-left px-4 py-2.5 border-b border-border transition-colors relative ${
+          isSelected ? "bg-accent/5" : "hover:bg-surface-secondary"
+        }`}
+        aria-current={isSelected ? "true" : undefined}
+      >
+        {isSelected && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-accent" />}
+        <p className={`text-sm truncate ${isSelected ? "font-semibold text-accent" : "font-medium text-text-primary"}`}>
+          {commit.message}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <Badge variant="mono">{commit.sha.slice(0, 7)}</Badge>
+          <span className="text-xs text-text-tertiary">{formatRelativeTime(commit.timestamp)}</span>
+        </div>
+      </button>
+    </div>
+  );
+}
 
 export default function WorkspacePage() {
   const router = useRouter();
@@ -67,6 +105,11 @@ export default function WorkspacePage() {
   });
   const replayRef = useRef<number | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
+  const commitsRef = useRef(commits);
+
+  useEffect(() => {
+    commitsRef.current = commits;
+  });
 
   const selectedCommit = commits[selectedIndex];
 
@@ -74,15 +117,16 @@ export default function WorkspacePage() {
     try {
       const service = getGitService();
       const branches = await service.listBranches();
+      const currentCommits = commitsRef.current;
       const contributors = new Set<string>();
-      commits.forEach((c) => contributors.add(c.author));
+      currentCommits.forEach((c) => contributors.add(c.author));
       setStats({
-        commitCount: commits.length,
+        commitCount: currentCommits.length,
         branchCount: branches.length,
         contributorCount: contributors.size,
       });
     } catch {}
-  }, [commits]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,12 +201,12 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     if (selectedCommit) {
-      loadDiff(selectedCommit.sha, selectedCommit.parentShas[0]);
+      loadDiff(selectedCommit.sha, selectedCommit.parentShas?.[0]);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       checkPreview(selectedCommit.sha);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIndex, commits]);
+  }, [selectedCommit?.sha]);
 
   useEffect(() => {
     if (isPlaying && commits.length > 1) {
@@ -240,31 +284,6 @@ export default function WorkspacePage() {
     );
   }
 
-  const CommitRow = ({ index, style }: { index: number; style: React.CSSProperties; ariaAttributes: Record<string, unknown> }) => {
-    const commit = commits[index];
-    const isSelected = index === selectedIndex;
-    return (
-      <div style={style}>
-        <button
-          onClick={() => setSelectedIndex(index)}
-          className={`w-full text-left px-4 py-2.5 border-b border-border transition-colors relative ${
-            isSelected ? "bg-accent/5" : "hover:bg-surface-secondary"
-          }`}
-          aria-current={isSelected ? "true" : undefined}
-        >
-          {isSelected && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-accent" />}
-          <p className={`text-sm truncate ${isSelected ? "font-semibold text-accent" : "font-medium text-text-primary"}`}>
-            {commit.message}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="mono">{commit.sha.slice(0, 7)}</Badge>
-            <span className="text-xs text-text-tertiary">{formatRelativeTime(commit.timestamp)}</span>
-          </div>
-        </button>
-      </div>
-    );
-  };
-
   const sidebarTabs = [
     { id: "history", icon: Clock, label: "Commit History" },
     { id: "branches", icon: GitBranch, label: "Branch Explorer" },
@@ -274,6 +293,7 @@ export default function WorkspacePage() {
   ];
 
   return (
+    <ErrorBoundary>
     <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
       <aside className="w-full md:w-[300px] flex-shrink-0 border-b md:border-r border-border bg-surface flex flex-col overflow-hidden" role="navigation" aria-label="Workspace sidebar">
         <div className="p-3 border-b border-border">
@@ -322,13 +342,12 @@ export default function WorkspacePage() {
             </div>
             <div className="flex-1 overflow-hidden">
               <div style={{ height: "calc(100vh - 550px)" }}>
-                <List
+                <List<CommitRowData>
                   rowCount={commits.length}
                   rowHeight={64}
                   style={{ height: "100%", width: "100%" }}
                   rowComponent={CommitRow}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  rowProps={{} as any}
+                  rowProps={{ commits, selectedIndex, onSelect: setSelectedIndex }}
                 />
               </div>
             </div>
@@ -572,8 +591,8 @@ export default function WorkspacePage() {
                   <div className="border border-border rounded-lg p-4">
                     <p className="text-eyebrow text-text-tertiary mb-2">Commit Message</p>
                     <p className="text-sm text-text-primary">
-                      {currentCommit.parentShas.length > 0
-                        ? `Parent: ${currentCommit.parentShas[0].slice(0, 7)}`
+                      {currentCommit.parentShas?.length > 0
+                        ? `Parent: ${currentCommit.parentShas[0]?.slice(0, 7)}`
                         : "Initial commit (no parent)"}
                     </p>
                   </div>
@@ -664,5 +683,6 @@ export default function WorkspacePage() {
         />
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
