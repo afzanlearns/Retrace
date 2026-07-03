@@ -6,6 +6,8 @@ import { List } from "react-window";
 import {
   GitBranch,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Play,
   Pause,
   SkipBack,
@@ -13,6 +15,8 @@ import {
   Clock,
   Code2,
   Columns,
+  Maximize2,
+  Minimize2,
   Settings as SettingsIcon,
   FolderOpen,
   FileText,
@@ -96,6 +100,7 @@ export default function WorkspacePage() {
   const [autoplay, setAutoplay] = useState(true);
   const [previewFiles, setPreviewFiles] = useState<Map<string, string> | null>(null);
   const [previewAvailable, setPreviewAvailable] = useState(false);
+  const [isImmersive, setIsImmersive] = useState(false);
   const [stats, setStats] = useState({
     commitCount: 0,
     branchCount: 0,
@@ -237,6 +242,15 @@ export default function WorkspacePage() {
     };
   }, [previewFiles]);
 
+  useEffect(() => {
+    if (!isImmersive) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsImmersive(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isImmersive]);
+
   const currentCommit = selectedCommit;
 
   if (!handle) return null;
@@ -290,6 +304,105 @@ export default function WorkspacePage() {
     { id: "compare", icon: GitCompare, label: "Compare" },
     { id: "settings", icon: SettingsIcon, label: "Settings" },
   ];
+
+  if (isImmersive) {
+    const prevIndex = selectedIndex > 0 ? selectedIndex - 1 : null;
+    const nextIndex = selectedIndex < commits.length - 1 ? selectedIndex + 1 : null;
+
+    const previewPanel = (side: "before" | "after") => {
+      const isBefore = side === "before";
+      const src = previewAvailable && previewFiles
+        ? getPreviewUrl(getEntryPoint(
+            (Array.from(previewFiles.keys())).map((p) => ({
+              name: p.split("/").pop() || p,
+              path: p,
+              type: "blob" as const,
+            }))
+          ) || "index.html")
+        : undefined;
+
+      return (
+        <div className="flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-secondary/50 border-b border-border flex-shrink-0">
+            <div className="flex gap-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-danger/70" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#EAB308]/70" />
+              <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
+            </div>
+            <span className="text-[10px] text-text-tertiary font-mono mx-auto">
+              {isBefore ? "Before This Commit" : "After This Commit"} — {repoName || "localhost"}
+            </span>
+          </div>
+          {previewAvailable && previewFiles && src ? (
+            <iframe
+              ref={isBefore ? previewIframeRef : undefined}
+              src={src}
+              className="flex-1 bg-white w-full"
+              title={`Live preview ${isBefore ? "before" : "after"} commit`}
+              sandbox="allow-scripts allow-same-origin"
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-surface-secondary/30 text-text-tertiary text-xs">
+              Live preview unavailable — requires a build step.
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <ErrorBoundary>
+      <div className="flex flex-col flex-1 overflow-hidden bg-surface">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => prevIndex !== null && setSelectedIndex(prevIndex)}
+              disabled={prevIndex === null}
+              className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-secondary disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              aria-label="Previous commit"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => nextIndex !== null && setSelectedIndex(nextIndex)}
+              disabled={nextIndex === null}
+              className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-secondary disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              aria-label="Next commit"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-semibold text-text-primary truncate max-w-[400px]">
+              {currentCommit.message}
+            </span>
+            <Badge variant="mono">{currentCommit.sha.slice(0, 7)}</Badge>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-text-tertiary tabular-nums">
+              {selectedIndex + 1} / {commits.length}
+            </span>
+            <Button variant="icon" onClick={() => setIsImmersive(false)} aria-label="Exit immersive view">
+              <Minimize2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+          <div className="flex flex-col overflow-hidden md:border-r border-border">
+            <p className="text-eyebrow text-text-tertiary px-3 pt-2 pb-1 flex-shrink-0">Before</p>
+            <div className="flex-1 overflow-hidden border border-border rounded-lg mx-2 mb-2 flex flex-col">
+              {previewPanel("before")}
+            </div>
+          </div>
+          <div className="flex flex-col overflow-hidden">
+            <p className="text-eyebrow text-text-tertiary px-3 pt-2 pb-1 flex-shrink-0">After</p>
+            <div className="flex-1 overflow-hidden border border-border rounded-lg mx-2 mb-2 flex flex-col">
+              {previewPanel("after")}
+            </div>
+          </div>
+        </div>
+      </div>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
@@ -538,6 +651,11 @@ export default function WorkspacePage() {
               </button>
             </div>
 
+            {viewMode === "split" && previewAvailable && (
+              <Button variant="icon" onClick={() => setIsImmersive(true)} aria-label="Expand split view">
+                <Maximize2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
 
