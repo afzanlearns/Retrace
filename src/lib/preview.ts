@@ -30,10 +30,7 @@ export function isStaticServable(
   // Has a bundler/framework config file → needs build step
   if (hasBundlerConfig) return false;
 
-  // Has package.json alongside index.html → assume build step
-  if (hasPackageJson) return false;
-
-  // Pure static: index.html, no package.json, no bundler config
+  // Pure static: index.html, no bundler config (even if package.json exists)
   return true;
 }
 
