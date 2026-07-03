@@ -243,7 +243,7 @@ async function computeCommitDiff(
         return { path, type: "modified" };
       },
       reduce: async (_parent: unknown, children: unknown[]) => {
-        return children.filter(Boolean);
+        return children.flat(Infinity).filter(Boolean);
       },
       iterate: (async (walk, children) => {
         const results = [];
