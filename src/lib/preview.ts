@@ -6,7 +6,7 @@ const BUNDLER_CONFIGS = new Set([
   ".parcelrc", "vue.config.js", "nuxt.config.ts",
 ]);
 
-const OUTPUT_DIRS = new Set(["dist", "build", "out", "_site", "public"]);
+const OUTPUT_DIRS = new Set(["dist", "build", "out", "_site"]);
 
 export function isStaticServable(
   tree: { name: string; path: string; type: "blob" | "tree" }[]
@@ -24,9 +24,6 @@ export function isStaticServable(
     (e) => e.type === "tree" && OUTPUT_DIRS.has(e.name)
   );
 
-  // Pre-built output directory exists → static
-  if (hasOutputDir) return true;
-
   // Has a bundler/framework config file → needs build step
   if (hasBundlerConfig) return false;
 
@@ -35,6 +32,9 @@ export function isStaticServable(
     (e) => e.type === "blob" && (e.name.endsWith(".jsx") || e.name.endsWith(".tsx"))
   );
   if (hasJsxOrTsx) return false;
+
+  // Pre-built output directory exists → static
+  if (hasOutputDir) return true;
 
   // Pure static: index.html, no bundler config, no JSX/TSX files
   return true;
