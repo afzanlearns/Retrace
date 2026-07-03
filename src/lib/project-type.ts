@@ -2,7 +2,6 @@ export type ProjectType = "web" | "cli-library-backend" | "unknown-mixed";
 
 const FRONTEND_CONFIGS = new Set([
   "vite.config.ts", "vite.config.js", "vite.config.mjs",
-  "tsconfig.json",
   "webpack.config.js", "webpack.config.ts",
   "next.config.js", "next.config.mjs", "next.config.ts",
   "rollup.config.js", "rollup.config.ts",

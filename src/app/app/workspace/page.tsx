@@ -181,6 +181,9 @@ export default function WorkspacePage() {
       const service = getGitService();
       const tree = await service.getFileTree(sha);
       const available = isStaticServable(tree);
+      if (!available) {
+        console.log(`[preview] NOT servable — rootFiles=${Array.from(tree.filter(e => !e.path.includes("/")).map(e => e.name)).join(",")}`);
+      }
       setPreviewAvailable(available);
 
       if (available && viewMode === "split") {
