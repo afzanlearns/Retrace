@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import {
   Play,
   Pause,
   SkipBack,
   SkipForward,
-  ZoomIn,
-  Maximize2,
   Repeat,
   Repeat1,
 } from "lucide-react";
@@ -49,13 +46,12 @@ export function TimelineScrubber({
   autoplay,
   onAutoplayChange,
 }: TimelineScrubberProps) {
-  const [zoom, setZoom] = useState(1);
   const speeds = [1, 2, 4];
 
   if (!commits?.length) return null;
 
-  const maxThumbnails = Math.min(commits.length, Math.floor(12 * zoom));
-  const step = Math.max(1, Math.floor(commits.length / maxThumbnails));
+  const VISIBLE_THUMBNAILS = 12;
+  const step = Math.max(1, Math.floor(commits.length / VISIBLE_THUMBNAILS));
   const thumbnails = commits.filter((_, i) => i % step === 0 || i === currentIndex);
   if (!thumbnails.find((t) => t.sha === commits[currentIndex].sha)) {
     thumbnails.push(commits[currentIndex]);
@@ -125,24 +121,6 @@ export function TimelineScrubber({
           </button>
         </div>
 
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="icon"
-            onClick={() => setZoom(Math.min(3, zoom + 0.5))}
-            aria-label="Zoom in"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="icon"
-            onClick={() => setZoom(1)}
-            aria-label="Fit to screen"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </Button>
-        </div>
       </div>
 
       <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto">

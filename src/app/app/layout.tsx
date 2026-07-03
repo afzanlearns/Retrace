@@ -57,7 +57,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
             mode: "read",
           });
           if (permission === "granted") {
-            setRepo(repo.handle, repo.id, repo.name);
+            setRepo(repo.handle, repo.id, repo.handle.name);
             router.push("/app/workspace");
             return;
           }

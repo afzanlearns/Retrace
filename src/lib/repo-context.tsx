@@ -96,12 +96,18 @@ export function RepoProvider({ children }: { children: ReactNode }) {
     try {
       const picked = await pickRepository();
       if (picked) {
-        const id = `${picked.name}_${Date.now()}`;
-        setRepo(picked, id, picked.name);
+        const name = picked.name;
+        // Sanity-check: reject names that look like browser UI labels
+        if (!name || /^ctrl\s*\+/i.test(name)) {
+          resolveRef.current?.(null);
+          return;
+        }
+        const id = `${name}_${Date.now()}`;
+        setRepo(picked, id, name);
         await addRecentRepo({
           id,
-          name: picked.name,
-          path: picked.name,
+          name,
+          path: name,
           lastOpened: Date.now(),
           commitCount: 0,
           handle: picked,

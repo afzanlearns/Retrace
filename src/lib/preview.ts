@@ -1,26 +1,41 @@
+const BUNDLER_CONFIGS = new Set([
+  "vite.config.ts", "vite.config.js", "vite.config.mjs",
+  "tsconfig.json",
+  "webpack.config.js", "webpack.config.ts",
+  "next.config.js", "next.config.mjs", "next.config.ts",
+  "rollup.config.js", "rollup.config.ts",
+  ".parcelrc", "vue.config.js", "nuxt.config.ts",
+]);
+
+const OUTPUT_DIRS = new Set(["dist", "build", "out", "_site", "public"]);
+
 export function isStaticServable(
   tree: { name: string; path: string; type: "blob" | "tree" }[]
 ): boolean {
-  const rootFiles = new Set(
+  const rootNames = new Set(
     tree.filter((e) => !e.path.includes("/")).map((e) => e.name)
   );
 
-  const hasIndexHtml = rootFiles.has("index.html");
-  const hasPackageJson = rootFiles.has("package.json");
-  const hasBuildScript = false;
+  const hasIndexHtml = rootNames.has("index.html");
+  if (!hasIndexHtml) return false;
 
-  if (!hasPackageJson && hasIndexHtml) return true;
-
-  if (hasPackageJson && !hasBuildScript && hasIndexHtml) return true;
-
-  const commonOutputDirs = ["dist", "build", "out", "_site", "public"];
+  const hasPackageJson = rootNames.has("package.json");
+  const hasBundlerConfig = [...BUNDLER_CONFIGS].some((f) => rootNames.has(f));
   const hasOutputDir = tree.some(
-    (e) => e.type === "tree" && commonOutputDirs.includes(e.name)
+    (e) => e.type === "tree" && OUTPUT_DIRS.has(e.name)
   );
 
+  // Pre-built output directory exists → static
   if (hasOutputDir) return true;
 
-  return hasIndexHtml;
+  // Has a bundler/framework config file → needs build step
+  if (hasBundlerConfig) return false;
+
+  // Has package.json alongside index.html → assume build step
+  if (hasPackageJson) return false;
+
+  // Pure static: index.html, no package.json, no bundler config
+  return true;
 }
 
 export function getEntryPoint(
