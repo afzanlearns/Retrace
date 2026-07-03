@@ -49,13 +49,13 @@ interface ServeFile {
 }
 
 type WorkerInMessage =
-  | { type: "init"; handle: FileSystemDirectoryHandle }
-  | { type: "walkCommits"; repoId: string; sinceSha?: string }
-  | { type: "getDiff"; commitSha: string; parentSha?: string }
-  | { type: "listBranches" }
-  | { type: "getCommit"; sha: string }
-  | { type: "getFileTree"; commitSha: string }
-  | { type: "serveCommit"; commitSha: string };
+  | { type: "init"; handle: FileSystemDirectoryHandle; requestId?: string }
+  | { type: "walkCommits"; repoId: string; sinceSha?: string; requestId?: string }
+  | { type: "getDiff"; commitSha: string; parentSha?: string; requestId?: string }
+  | { type: "listBranches"; requestId?: string }
+  | { type: "getCommit"; sha: string; requestId?: string }
+  | { type: "getFileTree"; commitSha: string; requestId?: string }
+  | { type: "serveCommit"; commitSha: string; requestId?: string };
 
 type WorkerOutMessage =
   | { type: "ready" }
@@ -402,8 +402,13 @@ function ensureSha(sha: unknown, label: string): string {
   return String(sha);
 }
 
-function send(msg: WorkerOutMessage) {
-  self.postMessage(msg);
+function send(msg: WorkerOutMessage, requestId?: string) {
+  // Echo the requestId back so the service can correlate concurrent requests
+  if (requestId && msg.type !== "commitProgress") {
+    self.postMessage({ ...msg, requestId });
+  } else {
+    self.postMessage(msg);
+  }
 }
 
 async function walkCommits(
@@ -499,31 +504,32 @@ async function walkCommits(
 
 self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
   const msg = e.data;
+  const requestId = msg.requestId;
 
   try {
     switch (msg.type) {
       case "init": {
         fs = createFsAdapter(msg.handle);
-        send({ type: "ready" });
+        send({ type: "ready" }, requestId);
         break;
       }
 
       case "walkCommits": {
         if (!fs) {
-          send({ type: "error", message: "Not initialized" });
+          send({ type: "error", message: "Not initialized" }, requestId);
           return;
         }
 
         const commits = await walkCommits(fs, msg.repoId, msg.sinceSha);
         const headSha = commits.length > 0 ? commits[0].sha : "";
 
-        send({ type: "commits", commits, total: commits.length, headSha });
+        send({ type: "commits", commits, total: commits.length, headSha }, requestId);
         break;
       }
 
       case "getDiff": {
         if (!fs) {
-          send({ type: "error", message: "Not initialized" });
+          send({ type: "error", message: "Not initialized" }, requestId);
           return;
         }
 
@@ -531,7 +537,7 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
 
         if (parentSha) {
           const files = await computeCommitDiff(fs, parentSha, msg.commitSha);
-          send({ type: "diff", files, commitSha: msg.commitSha });
+          send({ type: "diff", files, commitSha: msg.commitSha }, requestId);
         } else {
           const commit = await git.readCommit({
             fs,
@@ -544,9 +550,9 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
               commit.commit.parent[0],
               msg.commitSha
             );
-            send({ type: "diff", files, commitSha: msg.commitSha });
+            send({ type: "diff", files, commitSha: msg.commitSha }, requestId);
           } else {
-            send({ type: "diff", files: [], commitSha: msg.commitSha });
+            send({ type: "diff", files: [], commitSha: msg.commitSha }, requestId);
           }
         }
         break;
@@ -554,7 +560,7 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
 
       case "listBranches": {
         if (!fs) {
-          send({ type: "error", message: "Not initialized" });
+          send({ type: "error", message: "Not initialized" }, requestId);
           return;
         }
 
@@ -579,13 +585,13 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           });
         }
 
-        send({ type: "branches", branches });
+        send({ type: "branches", branches }, requestId);
         break;
       }
 
       case "getCommit": {
         if (!fs) {
-          send({ type: "error", message: "Not initialized" });
+          send({ type: "error", message: "Not initialized" }, requestId);
           return;
         }
 
@@ -634,13 +640,13 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           changedFiles,
         };
 
-        send({ type: "commitDetail", commit: commitData });
+        send({ type: "commitDetail", commit: commitData }, requestId);
         break;
       }
 
       case "getFileTree": {
         if (!fs) {
-          send({ type: "error", message: "Not initialized" });
+          send({ type: "error", message: "Not initialized" }, requestId);
           return;
         }
 
@@ -660,13 +666,13 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           return a.name.localeCompare(b.name);
         });
 
-        send({ type: "fileTree", tree: entries });
+        send({ type: "fileTree", tree: entries }, requestId);
         break;
       }
 
       case "serveCommit": {
         if (!fs) {
-          send({ type: "error", message: "Not initialized" });
+          send({ type: "error", message: "Not initialized" }, requestId);
           return;
         }
 
@@ -691,14 +697,14 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           } catch {}
         }
 
-        send({ type: "serveFiles", files: serveFiles, commitSha: msg.commitSha });
+        send({ type: "serveFiles", files: serveFiles, commitSha: msg.commitSha }, requestId);
         break;
       }
     }
   } catch (err) {
     console.error("Worker error:", err);
     const message = err instanceof Error ? err.message : String(err);
-    send({ type: "error", message });
+    send({ type: "error", message }, requestId);
   }
 };
 

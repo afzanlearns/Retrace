@@ -12,13 +12,38 @@ export type WorkerStatus = "idle" | "initializing" | "ready" | "working" | "erro
 
 type Listener = (msg: WorkerOutMessage) => void;
 
+/** Milliseconds to wait for a worker response before rejecting. */
+const REQUEST_TIMEOUT_MS = 20_000;
+
+/**
+ * Message types that carry a requestId correlation field so we can route
+ * responses back to the correct pending promise even when multiple requests
+ * are in flight (e.g. getDiff + getFileTree fired simultaneously on commit
+ * selection).
+ */
+type RequestId = string;
+
+// Augmented message shapes that include an optional requestId used internally
+// between the service and the worker. The worker echoes the id back in its
+// response so we can correlate it.
+type TaggedWorkerInMessage = WorkerInMessage & { requestId?: RequestId };
+type TaggedWorkerOutMessage = WorkerOutMessage & { requestId?: RequestId };
+
+interface PendingRequest {
+  resolve: (msg: WorkerOutMessage) => void;
+  reject: (err: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
 export class GitService {
   private worker: Worker | null = null;
   private status: WorkerStatus = "idle";
   private listeners = new Set<Listener>();
-  private pendingResolve: ((value: WorkerOutMessage) => void) | null = null;
-  private pendingReject: ((err: Error) => void) | null = null;
+  private pending = new Map<RequestId, PendingRequest>();
   private _onProgress: ((progress: WorkerProgress) => void) | null = null;
+
+  // Special key used for the "init" handshake which has no requestId
+  private static INIT_KEY = "__init__";
 
   constructor() {}
 
@@ -30,55 +55,73 @@ export class GitService {
     this._onProgress = cb;
   }
 
-  private handleMessage = (msg: WorkerOutMessage) => {
+  private handleMessage = (msg: TaggedWorkerOutMessage) => {
     this.listeners.forEach((fn) => fn(msg));
 
-    switch (msg.type) {
-      case "ready":
-        this.status = "ready";
-        if (this.pendingResolve) {
-          this.pendingResolve(msg);
-          this.pendingResolve = null;
-          this.pendingReject = null;
-        }
-        break;
+    if (msg.type === "commitProgress") {
+      this._onProgress?.(msg.progress);
+      return;
+    }
 
-      case "commits":
-      case "diff":
-      case "branches":
-      case "commitDetail":
-      case "fileTree":
-        if (this.pendingResolve) {
-          this.pendingResolve(msg);
-          this.pendingResolve = null;
-          this.pendingReject = null;
-        }
-        this.status = "ready";
-        break;
+    // Determine which pending request this response belongs to
+    const key = msg.requestId ?? GitService.INIT_KEY;
+    const entry = this.pending.get(key);
 
-      case "commitProgress":
-        this._onProgress?.(msg.progress);
-        break;
+    if (!entry) {
+      // No pending request for this correlation id — ignore (stale response)
+      console.warn("[GitService] Received response with no matching pending request:", msg.type, key);
+      return;
+    }
 
-      case "error":
-        if (this.pendingReject) {
-          this.pendingReject(new Error(msg.message));
-          this.pendingResolve = null;
-          this.pendingReject = null;
-        }
-        this.status = "error";
-        break;
+    clearTimeout(entry.timer);
+    this.pending.delete(key);
+
+    if (msg.type === "error") {
+      this.status = "error";
+      entry.reject(new Error((msg as { message: string }).message));
+    } else {
+      this.status = "ready";
+      entry.resolve(msg);
     }
   };
 
-  private waitForMessage(): Promise<WorkerOutMessage> {
+  private sendRequest(
+    msg: WorkerInMessage,
+    key: RequestId
+  ): Promise<WorkerOutMessage> {
     return new Promise((resolve, reject) => {
-      this.pendingResolve = resolve;
-      this.pendingReject = reject;
+      const timer = setTimeout(() => {
+        if (this.pending.has(key)) {
+          this.pending.delete(key);
+          reject(
+            new Error(
+              `Worker request timed out after ${REQUEST_TIMEOUT_MS / 1000}s (type: ${msg.type}). ` +
+              `Try selecting the commit again.`
+            )
+          );
+        }
+      }, REQUEST_TIMEOUT_MS);
+
+      this.pending.set(key, { resolve, reject, timer });
+
+      const tagged: TaggedWorkerInMessage =
+        key === GitService.INIT_KEY ? msg : { ...msg, requestId: key };
+      this.worker?.postMessage(tagged);
     });
   }
 
+  private nextId(): RequestId {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
   async init(handle: FileSystemDirectoryHandle): Promise<void> {
+    // Cancel any pending requests from a previous session
+    for (const [, entry] of this.pending) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error("Worker reinitialized"));
+    }
+    this.pending.clear();
+
     if (this.worker) {
       this.worker.terminate();
     }
@@ -92,21 +135,23 @@ export class GitService {
     };
     this.worker.onerror = (err) => {
       this.status = "error";
-      if (this.pendingReject) {
-        this.pendingReject(new Error(`Worker error: ${err.message}`));
+      const entry = this.pending.get(GitService.INIT_KEY);
+      if (entry) {
+        clearTimeout(entry.timer);
+        this.pending.delete(GitService.INIT_KEY);
+        entry.reject(new Error(`Worker error: ${err.message}`));
       }
     };
 
     const msg: WorkerInMessage = { type: "init", handle };
-    this.worker.postMessage(msg);
-    await this.waitForMessage();
+    await this.sendRequest(msg, GitService.INIT_KEY);
   }
 
   async walkCommits(repoId: string, sinceSha?: string): Promise<CommitData[]> {
     this.status = "working";
+    const id = this.nextId();
     const msg: WorkerInMessage = { type: "walkCommits", repoId, sinceSha };
-    this.worker?.postMessage(msg);
-    const result = await this.waitForMessage();
+    const result = await this.sendRequest(msg, id);
     if (result.type === "commits") {
       return result.commits;
     }
@@ -118,9 +163,9 @@ export class GitService {
     parentSha?: string
   ): Promise<DiffFile[]> {
     this.status = "working";
+    const id = this.nextId();
     const msg: WorkerInMessage = { type: "getDiff", commitSha, parentSha };
-    this.worker?.postMessage(msg);
-    const result = await this.waitForMessage();
+    const result = await this.sendRequest(msg, id);
     if (result.type === "diff") {
       return result.files;
     }
@@ -129,9 +174,9 @@ export class GitService {
 
   async listBranches(): Promise<BranchData[]> {
     this.status = "working";
+    const id = this.nextId();
     const msg: WorkerInMessage = { type: "listBranches" };
-    this.worker?.postMessage(msg);
-    const result = await this.waitForMessage();
+    const result = await this.sendRequest(msg, id);
     if (result.type === "branches") {
       return result.branches;
     }
@@ -140,9 +185,9 @@ export class GitService {
 
   async getCommit(sha: string): Promise<CommitData> {
     this.status = "working";
+    const id = this.nextId();
     const msg: WorkerInMessage = { type: "getCommit", sha };
-    this.worker?.postMessage(msg);
-    const result = await this.waitForMessage();
+    const result = await this.sendRequest(msg, id);
     if (result.type === "commitDetail") {
       return result.commit;
     }
@@ -151,9 +196,9 @@ export class GitService {
 
   async getFileTree(commitSha: string): Promise<FileTreeEntry[]> {
     this.status = "working";
+    const id = this.nextId();
     const msg: WorkerInMessage = { type: "getFileTree", commitSha };
-    this.worker?.postMessage(msg);
-    const result = await this.waitForMessage();
+    const result = await this.sendRequest(msg, id);
     if (result.type === "fileTree") {
       return result.tree;
     }
@@ -164,9 +209,9 @@ export class GitService {
     commitSha: string
   ): Promise<{ path: string; content: number[] }[]> {
     this.status = "working";
+    const id = this.nextId();
     const msg: WorkerInMessage = { type: "serveCommit", commitSha };
-    this.worker?.postMessage(msg);
-    const result = await this.waitForMessage();
+    const result = await this.sendRequest(msg, id);
     if (result.type === "serveFiles") {
       return result.files;
     }
@@ -179,6 +224,11 @@ export class GitService {
   }
 
   destroy(): void {
+    for (const [, entry] of this.pending) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error("GitService destroyed"));
+    }
+    this.pending.clear();
     this.worker?.terminate();
     this.worker = null;
     this.listeners.clear();
