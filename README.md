@@ -4,6 +4,21 @@
 
 Retrace lets you open a local Git repository and explore its commit history visually: drag a timeline scrubber to jump between commits, inspect diffs with a proper side-by-side viewer, and (where the project structure allows it) preview a live rendering of what the site looked like at any point in its history. No uploads, no server, no account.
 
+
+---
+
+## Product Tour
+
+### Timeline & Split-View
+Scrub through your repository's history with visual markers, side-by-side file comparisons, and live previews.
+
+![Timeline and Split View](assets/splitview.png)
+
+### Unified Diff Inspector
+Review line-level modifications with syntax highlighting, file-by-file changes, and clear diff statistics.
+
+![Unified Diff View](assets/diffview.png)
+
 ---
 
 ## Why
