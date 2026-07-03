@@ -5,9 +5,13 @@ import {
   useContext,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import type { CommitData } from "@/workers/types";
+import { ConsentModal } from "@/components/ConsentModal";
+import { pickRepository } from "@/lib/browser";
+import { addRecentRepo } from "@/lib/db";
 
 interface RepoContextType {
   handle: FileSystemDirectoryHandle | null;
@@ -22,6 +26,11 @@ interface RepoContextType {
   ) => void;
   setCommits: (commits: CommitData[], headSha: string) => void;
   clearRepo: () => void;
+  /**
+   * Shows the in-app consent modal, then opens the native directory picker.
+   * On success, calls setRepo and navigates. Returns the handle or null.
+   */
+  requestAccess: () => Promise<FileSystemDirectoryHandle | null>;
 }
 
 const RepoContext = createContext<RepoContextType>({
@@ -33,6 +42,7 @@ const RepoContext = createContext<RepoContextType>({
   setRepo: () => {},
   setCommits: () => {},
   clearRepo: () => {},
+  requestAccess: async () => null,
 });
 
 export function RepoProvider({ children }: { children: ReactNode }) {
@@ -41,6 +51,10 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   const [repoName, setRepoName] = useState("");
   const [commits, setCommitsState] = useState<CommitData[]>([]);
   const [headSha, setHeadSha] = useState("");
+
+  // Consent modal state
+  const [consentOpen, setConsentOpen] = useState(false);
+  const resolveRef = useRef<((h: FileSystemDirectoryHandle | null) => void) | null>(null);
 
   const setRepo = useCallback(
     (h: FileSystemDirectoryHandle, id: string, name: string) => {
@@ -67,6 +81,45 @@ export function RepoProvider({ children }: { children: ReactNode }) {
     setHeadSha("");
   }, []);
 
+  /**
+   * Shows the consent modal and resolves with the chosen handle (or null).
+   */
+  const requestAccess = useCallback((): Promise<FileSystemDirectoryHandle | null> => {
+    return new Promise((resolve) => {
+      resolveRef.current = resolve;
+      setConsentOpen(true);
+    });
+  }, []);
+
+  const handleGrant = useCallback(async () => {
+    setConsentOpen(false);
+    try {
+      const picked = await pickRepository();
+      if (picked) {
+        const id = `${picked.name}_${Date.now()}`;
+        setRepo(picked, id, picked.name);
+        await addRecentRepo({
+          id,
+          name: picked.name,
+          path: picked.name,
+          lastOpened: Date.now(),
+          commitCount: 0,
+          handle: picked,
+        });
+      }
+      resolveRef.current?.(picked);
+    } catch {
+      resolveRef.current?.(null);
+    }
+    resolveRef.current = null;
+  }, [setRepo]);
+
+  const handleCancel = useCallback(() => {
+    setConsentOpen(false);
+    resolveRef.current?.(null);
+    resolveRef.current = null;
+  }, []);
+
   return (
     <RepoContext.Provider
       value={{
@@ -78,9 +131,15 @@ export function RepoProvider({ children }: { children: ReactNode }) {
         setRepo,
         setCommits,
         clearRepo,
+        requestAccess,
       }}
     >
       {children}
+      <ConsentModal
+        open={consentOpen}
+        onGrant={handleGrant}
+        onCancel={handleCancel}
+      />
     </RepoContext.Provider>
   );
 }

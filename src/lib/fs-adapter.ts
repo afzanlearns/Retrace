@@ -46,13 +46,30 @@ async function resolveHandle(
 }
 
 export function createFsAdapter(root: FileSystemDirectoryHandle) {
-  const readFile = async (path: string): Promise<Uint8Array> => {
+  const readFile = async (
+    path: string,
+    options?: { encoding?: string } | string
+  ): Promise<Uint8Array | string> => {
     const handle = await resolveHandle(root, path);
     if (!handle || handle instanceof FileSystemDirectoryHandle) {
       throw new Error(`ENOENT: ${path}`);
     }
     const file = await handle.getFile();
     const buffer = await file.arrayBuffer();
+    const encoding =
+      typeof options === "string"
+        ? options
+        : options && typeof options === "object"
+        ? options.encoding
+        : undefined;
+    if (
+      encoding &&
+      (encoding === "utf8" ||
+        encoding === "utf-8" ||
+        encoding === "UTF-8")
+    ) {
+      return new TextDecoder("utf-8").decode(new Uint8Array(buffer));
+    }
     return new Uint8Array(buffer);
   };
 

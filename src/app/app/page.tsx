@@ -4,36 +4,24 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, FolderOpen, Link, Upload, Lock } from "lucide-react";
 import { Button } from "@/components/Button";
-import { pickRepository } from "@/lib/browser";
 import { useSidebar } from "@/app/app/layout";
 import { useRepo } from "@/lib/repo-context";
-import { addRecentRepo } from "@/lib/db";
 
 export default function AppHome() {
   const router = useRouter();
   const { toggle } = useSidebar();
-  const { setRepo } = useRepo();
+  const { requestAccess } = useRepo();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const processHandle = useCallback(
     async (handle: FileSystemDirectoryHandle) => {
-      const repoId = `${handle.name}_${Date.now()}`;
-      setRepo(handle, repoId, handle.name);
-      await addRecentRepo({
-        id: repoId,
-        name: handle.name,
-        path: handle.name,
-        lastOpened: Date.now(),
-        commitCount: 0,
-        handle,
-      });
       router.push("/app/workspace");
     },
-    [router, setRepo]
+    [router]
   );
 
   const handleOpenRepo = async () => {
-    const handle = await pickRepository();
+    const handle = await requestAccess();
     if (handle) {
       processHandle(handle);
     }

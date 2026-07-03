@@ -24,10 +24,8 @@ import { ThemeProvider, useTheme } from "@/lib/theme";
 import { RepoProvider, useRepo } from "@/lib/repo-context";
 import { Button } from "@/components/Button";
 import { RetraceLogo } from "@/lib/logo";
-import { pickRepository } from "@/lib/browser";
 import { useRecentRepos } from "@/hooks/useRecentRepos";
 import { formatRelativeTime } from "@/lib/utils";
-import { addRecentRepo } from "@/lib/db";
 
 const SidebarContext = createContext<{
   collapsed: boolean;
@@ -42,28 +40,15 @@ function AppShellContent({ children }: { children: ReactNode }) {
   const router = useRouter();
   useTheme();
   const { repos, removeRepo, refresh } = useRecentRepos();
-  const { setRepo } = useRepo();
+  const { setRepo, requestAccess } = useRepo();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleOpenRepo = useCallback(async () => {
-    const handle = await pickRepository();
+    const handle = await requestAccess();
     if (handle) {
-      const repoId = `${handle.name}_${Date.now()}`;
-      setRepo(handle, repoId, handle.name);
-
-      await addRecentRepo({
-        id: repoId,
-        name: handle.name,
-        path: handle.name,
-        lastOpened: Date.now(),
-        commitCount: 0,
-        handle,
-      });
-
-      refresh();
       router.push("/app/workspace");
     }
-  }, [router, setRepo, refresh]);
+  }, [router, requestAccess]);
 
   const handleSelectRecentRepo = useCallback(
     async (repo: (typeof repos)[0]) => {
@@ -79,9 +64,13 @@ function AppShellContent({ children }: { children: ReactNode }) {
           }
         } catch {}
       }
-      await pickRepository();
+      // Permission not cached — go through consent flow
+      const handle = await requestAccess();
+      if (handle) {
+        router.push("/app/workspace");
+      }
     },
-    [router, setRepo]
+    [router, setRepo, requestAccess]
   );
 
   const toggleSidebar = () => setSidebarCollapsed((v) => !v);
