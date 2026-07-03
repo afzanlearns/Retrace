@@ -177,17 +177,18 @@ export default function WorkspacePage() {
   }, [handle]);
 
   async function checkPreview(sha: string) {
+    console.log(`[preview] checkPreview called for sha=${sha.slice(0,7)}`);
     try {
       const service = getGitService();
       const tree = await service.getFileTree(sha);
+      console.log(`[preview] getFileTree returned ${tree.length} entries`);
       const available = isStaticServable(tree);
-      if (!available) {
-        console.log(`[preview] NOT servable — rootFiles=${Array.from(tree.filter(e => !e.path.includes("/")).map(e => e.name)).join(",")}`);
-      }
+      console.log(`[preview] isStaticServable=${available} viewMode=${viewMode}`);
       setPreviewAvailable(available);
 
       if (available && viewMode === "split") {
         const files = await service.serveCommit(sha);
+        console.log(`[preview] serveCommit returned ${files.length} files`);
         const fileMap = new Map<string, Uint8Array>();
         for (const f of files) {
           fileMap.set(f.path, new Uint8Array(f.content));
@@ -199,18 +200,21 @@ export default function WorkspacePage() {
             type: "blob" as const,
           }))
         );
+        console.log(`[preview] entryPoint=${entryPoint} fileKeys=${Array.from(fileMap.keys()).join(",")}`);
         if (entryPoint) {
           const html = buildPreviewHtml(entryPoint, fileMap);
-          console.log(`[preview] entryPoint=${entryPoint} htmlLen=${html.length} hasGameClass=${html.includes("class Game") || html.includes("function Game")} firstChars=${html.slice(0, 120)}`);
+          console.log(`[preview] htmlLen=${html.length} hasGameClass=${html.includes("class Game") || html.includes("function Game")}`);
           setPreviewHtml(html);
         }
       }
-    } catch {
+    } catch (e) {
+      console.log(`[preview] ERROR: ${e instanceof Error ? e.message : String(e)}`);
       setPreviewAvailable(false);
     }
   }
 
   useEffect(() => {
+    console.log(`[preview] useEffect fired selectedCommit=${selectedCommit?.sha?.slice(0,7) || "null"}`);
     if (selectedCommit) {
       loadDiff(selectedCommit.sha, selectedCommit.parentShas?.[0]);
       // eslint-disable-next-line react-hooks/set-state-in-effect
