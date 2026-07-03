@@ -717,7 +717,7 @@ export default function WorkspacePage() {
                       className="bg-white flex-1"
                     />
                   </div>
-                  <div className="border border-border rounded-lg p-4 flex-shrink-0">
+                  <div className="border border-border rounded-lg p-4 flex-shrink-0 h-32 overflow-y-auto">
                     <p className="text-eyebrow text-text-tertiary mb-2">Commit Message</p>
                     <p className="text-sm text-text-primary">
                       {currentCommit.parentShas?.length > 0
@@ -745,7 +745,7 @@ export default function WorkspacePage() {
                       className="bg-white flex-1"
                     />
                   </div>
-                  <div className="border border-border rounded-lg p-4 flex-shrink-0">
+                  <div className="border border-border rounded-lg p-4 flex-shrink-0 h-32 overflow-y-auto">
                     <p className="text-eyebrow text-text-tertiary mb-2">Changed Files ({diffFiles.length})</p>
                     <div className="space-y-1">
                       {diffFiles.map((file) => (
