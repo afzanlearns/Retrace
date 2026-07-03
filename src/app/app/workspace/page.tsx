@@ -343,7 +343,7 @@ export default function WorkspacePage() {
     const previewPanel = (side: "before" | "after") => {
       const isBefore = side === "before";
       return (
-        <div className="flex flex-col overflow-hidden">
+        <div className="flex flex-col overflow-hidden flex-1 h-full">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-secondary/50 border-b border-border flex-shrink-0">
             <div className="flex gap-1">
               <div className="w-2.5 h-2.5 rounded-full bg-danger/70" />
