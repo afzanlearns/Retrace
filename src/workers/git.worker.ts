@@ -228,8 +228,16 @@ async function computeCommitDiff(
       map: async (path, entries) => {
         const [parent, current] = entries;
         if (!parent && !current) { console.log(`[map] ${path} => null (no entries)`); return null; }
-        if (!parent) { console.log(`[map] ${path} => added`); return { path, type: "added" }; }
-        if (!current) { console.log(`[map] ${path} => removed`); return { path, type: "removed" }; }
+        if (!parent) {
+          const isBlob = await current!.type() === "blob";
+          console.log(`[map] ${path} => added${isBlob ? "" : " (dir)"}`);
+          return { path, type: "added", isBlob };
+        }
+        if (!current) {
+          const isBlob = await parent!.type() === "blob";
+          console.log(`[map] ${path} => removed${isBlob ? "" : " (dir)"}`);
+          return { path, type: "removed", isBlob };
+        }
         const parentContent = await parent.content();
         const currentContent = await current.content();
         if (
@@ -241,17 +249,20 @@ async function computeCommitDiff(
           console.log(`[map] ${path} => null (unchanged)`);
           return null;
         }
-        console.log(`[map] ${path} => modified (content differs)`);
-        return { path, type: "modified" };
+        const isBlob = parentContent !== undefined;
+        console.log(`[map] ${path} => modified${isBlob ? "" : " (dir)"}`);
+        return { path, type: "modified", isBlob };
       },
-      reduce: async (_parent: unknown, children: unknown[]) => {
-        const rawLen = children.length;
-        const afterFlat = children.flat(Infinity);
-        const afterFilter = afterFlat.filter(Boolean);
-        if (rawLen > 0 || afterFilter.length > 0) {
-          console.log(`[reduce] raw=${rawLen} postFlat=${afterFlat.length} postFilter=${afterFilter.length}`);
+      reduce: async (parent: unknown, children: unknown[]) => {
+        const { isBlob } = (parent || {}) as { isBlob?: boolean };
+        const flattened = (children as unknown[]).flat(Infinity).filter(Boolean) as { isBlob?: boolean }[];
+        if (flattened.length === 0 && isBlob) {
+          return [parent!];
         }
-        return afterFilter;
+        if (children.length > 0 || flattened.length > 0) {
+          console.log(`[reduce] raw=${children.length} postFlat=${flattened.length} isBlob=${!!isBlob}`);
+        }
+        return flattened;
       },
       iterate: (async (walk, children) => {
         const results = [];
