@@ -191,6 +191,7 @@ export default function WorkspacePage() {
         );
         if (entryPoint) {
           const html = buildPreviewHtml(entryPoint, fileMap);
+          console.log(`[preview] entryPoint=${entryPoint} htmlLen=${html.length} hasGameClass=${html.includes("class Game") || html.includes("function Game")} firstChars=${html.slice(0, 120)}`);
           setPreviewHtml(html);
         }
       }

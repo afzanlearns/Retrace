@@ -696,26 +696,32 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           return;
         }
 
-        const serveCommit = await git.readCommit({ fs, dir: "/", oid: msg.commitSha });
-        const serveTree = await git.readTree({ fs, dir: "/", oid: serveCommit.commit.tree });
-
         const serveFiles: ServeFile[] = [];
-        const blobEntries = serveTree.tree.filter((e: { type: string }) => e.type === "blob");
 
-        for (const entry of blobEntries) {
-          try {
-            const blob = await git.readBlob({
-              fs,
-              dir: "/",
-              oid: msg.commitSha,
-              filepath: entry.path,
-            });
-            serveFiles.push({
-              path: entry.path,
-              content: Array.from(blob.blob),
-            });
-          } catch {}
-        }
+        try {
+          await git.walk({
+            fs,
+            dir: "/",
+            trees: [ TREE({ ref: msg.commitSha }) ],
+            map: async (filepath, [entry]) => {
+              if (!entry) return null;
+              if ((await entry.type()) !== "blob") return null;
+              const content = await entry.content();
+              if (!content) return null;
+              serveFiles.push({ path: filepath, content: Array.from(content) });
+              return null;
+            },
+            reduce: async (_parent, children) =>
+              (children as unknown[]).flat(Infinity).filter(Boolean),
+            iterate: (async (walk, children) => {
+              const results = [];
+              for await (const child of children) {
+                results.push(await walk(child));
+              }
+              return results;
+            }) as WalkerIterate,
+          });
+        } catch {}
 
         send({ type: "serveFiles", files: serveFiles, commitSha: msg.commitSha }, requestId);
         break;
