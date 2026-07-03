@@ -729,7 +729,7 @@ export default function WorkspacePage() {
         </div>
 
         <TimelineScrubber
-          commits={commits.map((c) => ({ sha: c.sha, message: c.message, timestamp: c.timestamp }))}
+          commits={commits.map((c) => ({ sha: c.sha, message: c.message, timestamp: c.timestamp, additions: c.additions, deletions: c.deletions }))}
           currentIndex={selectedIndex}
           onSelect={setSelectedIndex}
           isPlaying={isPlaying}

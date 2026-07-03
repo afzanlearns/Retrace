@@ -18,6 +18,8 @@ interface TimelineCommit {
   sha: string;
   message: string;
   timestamp: number;
+  additions: number;
+  deletions: number;
 }
 
 interface TimelineScrubberProps {
@@ -144,32 +146,56 @@ export function TimelineScrubber({
       </div>
 
       <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto">
-        {thumbnails.map((commit) => {
-          const isSelected = commit.sha === commits[currentIndex].sha;
-          return (
-            <button
-              key={commit.sha}
-              onClick={() => onSelect(commits.findIndex((c) => c.sha === commit.sha))}
-              className={`flex-shrink-0 w-24 rounded-md border-2 transition-all duration-150 overflow-hidden ${
-                isSelected
-                  ? "border-accent shadow-sm"
-                  : "border-border hover:border-text-tertiary"
-              }`}
-            >
-              <div className="h-12 bg-surface-secondary flex items-center justify-center">
-                <div className="w-4 h-4 rounded-full bg-border" />
-              </div>
-              <div className="px-1.5 py-1 bg-surface">
-                <p className="text-[10px] text-text-primary truncate leading-tight">
-                  {commit.message}
-                </p>
-                <p className="text-[9px] text-text-tertiary leading-tight">
-                  {formatRelativeTime(commit.timestamp)}
-                </p>
-              </div>
-            </button>
-          );
-        })}
+        {(() => {
+          const maxAdd = Math.max(1, ...commits.map((c) => c.additions));
+          const maxDel = Math.max(1, ...commits.map((c) => c.deletions));
+          return thumbnails.map((commit) => {
+            const isSelected = commit.sha === commits[currentIndex].sha;
+            const addPct = (commit.additions / maxAdd) * 100;
+            const delPct = (commit.deletions / maxDel) * 100;
+            const hasChanges = commit.additions > 0 || commit.deletions > 0;
+            return (
+              <button
+                key={commit.sha}
+                onClick={() => onSelect(commits.findIndex((c) => c.sha === commit.sha))}
+                className={`flex-shrink-0 w-24 rounded-md border-2 transition-all duration-150 overflow-hidden ${
+                  isSelected
+                    ? "border-accent shadow-sm"
+                    : "border-border hover:border-text-tertiary"
+                }`}
+              >
+                  <div className="h-12 bg-surface-secondary flex flex-col justify-end p-2">
+                  {hasChanges ? (
+                    <div className="flex items-end gap-[3px] h-full">
+                      <div
+                        className="flex-1 rounded-sm bg-success/70 transition-all duration-300"
+                        style={{ height: `${Math.max(6, addPct)}%` }}
+                        title={`+${commit.additions}`}
+                      />
+                      <div
+                        className="flex-1 rounded-sm bg-danger/70 transition-all duration-300"
+                        style={{ height: `${Math.max(6, delPct)}%` }}
+                        title={`-${commit.deletions}`}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-3 h-3 rounded-full bg-border/40" />
+                    </div>
+                  )}
+                </div>
+                <div className="px-1.5 py-1 bg-surface">
+                  <p className="text-[10px] text-text-primary truncate leading-tight">
+                    {commit.message}
+                  </p>
+                  <p className="text-[9px] text-text-tertiary leading-tight">
+                    {formatRelativeTime(commit.timestamp)}
+                  </p>
+                </div>
+              </button>
+            );
+          });
+        })()}
       </div>
     </div>
   );
