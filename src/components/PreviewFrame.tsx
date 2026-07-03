@@ -19,11 +19,15 @@ export function PreviewFrame({ srcdoc, title, className, error, onRetry }: Previ
   const [scale, setScale] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
+  const rect = containerRef.current?.getBoundingClientRect();
+  console.log(`[PreviewFrame] render - title: "${title}", scale: ${scale}, containerSize: ${containerSize.width}x${containerSize.height}, getBoundingClientRect: ${rect ? `${rect.width}x${rect.height}` : "null"}`);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
+      console.log(`[PreviewFrame] ResizeObserver - title: "${title}", contentRect: ${width}x${height}`);
       setContainerSize({ width, height });
       const scaleX = width / INTRINSIC_WIDTH;
       const scaleY = height / INTRINSIC_HEIGHT;
@@ -31,7 +35,7 @@ export function PreviewFrame({ srcdoc, title, className, error, onRetry }: Previ
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [title]);
 
   const fallback = error ? (
     <div
