@@ -227,9 +227,9 @@ async function computeCommitDiff(
       trees: [TREE({ ref: parentSha }), TREE({ ref: commitSha })],
       map: async (path, entries) => {
         const [parent, current] = entries;
-        if (!parent && !current) return null;
-        if (!parent) return { path, type: "added" };
-        if (!current) return { path, type: "removed" };
+        if (!parent && !current) { console.log(`[map] ${path} => null (no entries)`); return null; }
+        if (!parent) { console.log(`[map] ${path} => added`); return { path, type: "added" }; }
+        if (!current) { console.log(`[map] ${path} => removed`); return { path, type: "removed" }; }
         const parentContent = await parent.content();
         const currentContent = await current.content();
         if (
@@ -238,12 +238,20 @@ async function computeCommitDiff(
           parentContent.length === currentContent.length &&
           parentContent.every((val, idx) => val === currentContent[idx])
         ) {
+          console.log(`[map] ${path} => null (unchanged)`);
           return null;
         }
+        console.log(`[map] ${path} => modified (content differs)`);
         return { path, type: "modified" };
       },
       reduce: async (_parent: unknown, children: unknown[]) => {
-        return children.flat(Infinity).filter(Boolean);
+        const rawLen = children.length;
+        const afterFlat = children.flat(Infinity);
+        const afterFilter = afterFlat.filter(Boolean);
+        if (rawLen > 0 || afterFilter.length > 0) {
+          console.log(`[reduce] raw=${rawLen} postFlat=${afterFlat.length} postFilter=${afterFilter.length}`);
+        }
+        return afterFilter;
       },
       iterate: (async (walk, children) => {
         const results = [];
@@ -253,7 +261,7 @@ async function computeCommitDiff(
         return results;
       }) as WalkerIterate,
     }).then(async (changedFiles: unknown[]) => {
-      console.log(`[computeCommitDiff] commitSha=${commitSha.slice(0,7)} parentSha=${parentSha.slice(0,7)} raw changedFiles:`, JSON.stringify(changedFiles));
+      console.log(`[computeCommitDiff] commitSha=${commitSha.slice(0,7)} parentSha=${parentSha.slice(0,7)} finalCount=${(changedFiles||[]).length}`);
       for (const file of (changedFiles || []) as { path: string; type: string }[]) {
         if (!file) continue;
 
