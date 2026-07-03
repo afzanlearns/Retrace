@@ -234,14 +234,19 @@ export default function WorkspacePage() {
   }, [selectedCommit?.sha, viewMode]);
 
   useEffect(() => {
-    console.log(`[preview] useEffect fired selectedCommit=${selectedCommit?.sha?.slice(0,7) || "null"}`);
     if (selectedCommit) {
       loadDiff(selectedCommit.sha, selectedCommit.parentShas?.[0]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      checkPreview(selectedCommit.sha);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCommit?.sha]);
+
+  useEffect(() => {
+    console.log(`[preview] useEffect fired selectedCommit=${selectedCommit?.sha?.slice(0,7) || "null"} viewMode=${viewMode}`);
+    if (selectedCommit) {
+      checkPreview(selectedCommit.sha);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCommit?.sha, viewMode]);
 
   useEffect(() => {
     if (isPlaying && commits.length > 1) {
