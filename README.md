@@ -12,7 +12,7 @@ Retrace lets you open a local Git repository and explore its commit history visu
 ### Timeline & Split-View
 Scrub through your repository's history with visual markers, side-by-side file comparisons, and live previews.
 
-![Timeline and Split View](assets/splitview.png)
+![Timeline and Split View](assets/splitview-cropped.png)
 
 ### Unified Diff Inspector
 Review line-level modifications with syntax highlighting, file-by-file changes, and clear diff statistics.
