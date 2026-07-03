@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { DiffFileRow } from "@/components/DiffFileRow";
+import { PreviewFrame } from "@/components/PreviewFrame";
 import { CodeDiffPanel } from "@/components/CodeDiffPanel";
 import { TimelineScrubber } from "@/components/TimelineScrubber";
 import { BranchExplorer } from "@/components/BranchExplorer";
@@ -333,19 +334,11 @@ export default function WorkspacePage() {
               {isBefore ? "Before This Commit" : "After This Commit"} — {repoName || "localhost"}
             </span>
           </div>
-          {previewAvailable && previewFiles && src ? (
-            <iframe
-              ref={isBefore ? previewIframeRef : undefined}
-              src={src}
-              className="flex-1 bg-white w-full"
-              title={`Live preview ${isBefore ? "before" : "after"} commit`}
-              sandbox="allow-scripts allow-same-origin"
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-surface-secondary/30 text-text-tertiary text-xs">
-              Live preview unavailable — requires a build step.
-            </div>
-          )}
+          <PreviewFrame
+            src={src}
+            title={`Live preview ${isBefore ? "before" : "after"} commit`}
+            className="bg-white flex-1"
+          />
         </div>
       );
     };
@@ -682,25 +675,17 @@ export default function WorkspacePage() {
                       </div>
                       <span className="text-[10px] text-text-tertiary font-mono mx-auto">{repoName || "localhost"}</span>
                     </div>
-                    {previewAvailable && previewFiles ? (
-                      <iframe
-                        ref={previewIframeRef}
-                        src={getPreviewUrl(getEntryPoint(
-                          (Array.from(previewFiles.keys())).map((p) => ({
-                            name: p.split("/").pop() || p,
-                            path: p,
-                            type: "blob" as const,
-                          }))
-                        ) || "index.html")}
-                        className="w-full h-64 bg-white"
-                        title="Live preview before commit"
-                        sandbox="allow-scripts allow-same-origin"
-                      />
-                    ) : (
-                      <div className="bg-surface-secondary/30 p-8 flex items-center justify-center text-text-tertiary text-xs">
-                        Live preview unavailable for this commit — requires a build step.
-                      </div>
-                    )}
+                    <PreviewFrame
+                      src={previewAvailable && previewFiles ? getPreviewUrl(getEntryPoint(
+                        (Array.from(previewFiles.keys())).map((p) => ({
+                          name: p.split("/").pop() || p,
+                          path: p,
+                          type: "blob" as const,
+                        }))
+                      ) || "index.html") : undefined}
+                      title="Live preview before commit"
+                      className="bg-white"
+                    />
                   </div>
                   <div className="border border-border rounded-lg p-4">
                     <p className="text-eyebrow text-text-tertiary mb-2">Commit Message</p>
@@ -722,24 +707,17 @@ export default function WorkspacePage() {
                       </div>
                       <span className="text-[10px] text-text-tertiary font-mono mx-auto">{repoName || "localhost"}</span>
                     </div>
-                    {previewAvailable && previewFiles ? (
-                      <iframe
-                        src={getPreviewUrl(getEntryPoint(
-                          (Array.from(previewFiles.keys())).map((p) => ({
-                            name: p.split("/").pop() || p,
-                            path: p,
-                            type: "blob" as const,
-                          }))
-                        ) || "index.html")}
-                        className="w-full h-64 bg-white"
-                        title="Live preview after commit"
-                        sandbox="allow-scripts allow-same-origin"
-                      />
-                    ) : (
-                      <div className="bg-surface-secondary/30 p-8 flex items-center justify-center text-text-tertiary text-xs">
-                        Live preview unavailable for this commit — requires a build step.
-                      </div>
-                    )}
+                    <PreviewFrame
+                      src={previewAvailable && previewFiles ? getPreviewUrl(getEntryPoint(
+                        (Array.from(previewFiles.keys())).map((p) => ({
+                          name: p.split("/").pop() || p,
+                          path: p,
+                          type: "blob" as const,
+                        }))
+                      ) || "index.html") : undefined}
+                      title="Live preview after commit"
+                      className="bg-white"
+                    />
                   </div>
                   <div className="border border-border rounded-lg p-4">
                     <p className="text-eyebrow text-text-tertiary mb-2">Changed Files ({diffFiles.length})</p>
