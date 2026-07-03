@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { CommitData } from "@/workers/types";
+import type { ProjectType } from "@/lib/project-type";
 import { ConsentModal } from "@/components/ConsentModal";
 import { pickRepository } from "@/lib/browser";
 import { addRecentRepo } from "@/lib/db";
@@ -17,6 +18,7 @@ interface RepoContextType {
   handle: FileSystemDirectoryHandle | null;
   repoId: string | null;
   repoName: string;
+  projectType: ProjectType;
   commits: CommitData[];
   headSha: string;
   setRepo: (
@@ -24,6 +26,7 @@ interface RepoContextType {
     repoId: string,
     name: string
   ) => void;
+  setProjectType: (t: ProjectType) => void;
   setCommits: (commits: CommitData[], headSha: string) => void;
   clearRepo: () => void;
   /**
@@ -37,9 +40,11 @@ const RepoContext = createContext<RepoContextType>({
   handle: null,
   repoId: null,
   repoName: "",
+  projectType: "unknown-mixed",
   commits: [],
   headSha: "",
   setRepo: () => {},
+  setProjectType: () => {},
   setCommits: () => {},
   clearRepo: () => {},
   requestAccess: async () => null,
@@ -49,6 +54,7 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   const [handle, setHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [repoId, setRepoId] = useState<string | null>(null);
   const [repoName, setRepoName] = useState("");
+  const [projectType, setProjectType] = useState<ProjectType>("unknown-mixed");
   const [commits, setCommitsState] = useState<CommitData[]>([]);
   const [headSha, setHeadSha] = useState("");
 
@@ -77,6 +83,7 @@ export function RepoProvider({ children }: { children: ReactNode }) {
     setHandle(null);
     setRepoId(null);
     setRepoName("");
+    setProjectType("unknown-mixed");
     setCommitsState([]);
     setHeadSha("");
   }, []);
@@ -132,9 +139,11 @@ export function RepoProvider({ children }: { children: ReactNode }) {
         handle,
         repoId,
         repoName,
+        projectType,
         commits,
         headSha,
         setRepo,
+        setProjectType,
         setCommits,
         clearRepo,
         requestAccess,

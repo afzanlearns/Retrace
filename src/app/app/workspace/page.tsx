@@ -42,6 +42,7 @@ import {
   getEntryPoint,
 } from "@/lib/preview";
 import { buildPreviewHtml } from "@/lib/inline-html";
+import { classifyProject } from "@/lib/project-type";
 import { wipeDatabase } from "@/lib/db";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { CommitData, WorkerProgress } from "@/workers/types";
@@ -85,7 +86,7 @@ function CommitRow({
 
 export default function WorkspacePage() {
   const router = useRouter();
-  const { handle, repoId, repoName, commits, setCommits, clearRepo } = useRepo();
+  const { handle, repoId, repoName, projectType, setProjectType, commits, setCommits, clearRepo } = useRepo();
   const { diffFiles, diffLoading, diffError, loadDiff } = useDiff();
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -155,6 +156,12 @@ export default function WorkspacePage() {
         setCommits(result, headSha);
         setStats((prev) => ({ ...prev, commitCount: result.length }));
         loadBranches();
+
+        // One-time repo-level classification from HEAD tree
+        try {
+          const headTree = await service.getFileTree(headSha);
+          setProjectType(classifyProject(headTree));
+        } catch {}
       } catch (err) {
         console.error("Failed to load repository:", err);
         if (!cancelled) {
@@ -232,6 +239,12 @@ export default function WorkspacePage() {
   }, [isPlaying, replaySpeed, loop, commits.length]);
 
 
+
+  useEffect(() => {
+    if (projectType === "cli-library-backend" && viewMode === "split") {
+      setViewMode("diff");
+    }
+  }, [projectType, viewMode]);
 
   useEffect(() => {
     if (!isImmersive) return;
@@ -388,7 +401,12 @@ export default function WorkspacePage() {
           <button className="w-full flex items-center gap-2 text-left py-1.5 px-2 rounded-md hover:bg-surface-secondary transition-colors">
             <FolderOpen className="w-4 h-4 text-text-tertiary" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">{repoName || "Repository"}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-text-primary truncate">{repoName || "Repository"}</p>
+                {projectType === "cli-library-backend" && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex-shrink-0">CLI</span>
+                )}
+              </div>
               <p className="text-xs text-text-tertiary truncate">{handle?.name || ""}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-text-tertiary" />
@@ -604,9 +622,11 @@ export default function WorkspacePage() {
                 onClick={() => setViewMode("split")}
                 role="tab"
                 aria-selected={viewMode === "split"}
+                disabled={projectType === "cli-library-backend"}
+                title={projectType === "cli-library-backend" ? "Split View isn't available — this project doesn't appear to have a browser-renderable frontend." : ""}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   viewMode === "split" ? "bg-surface shadow-sm text-text-primary" : "text-text-tertiary"
-                }`}
+                } ${projectType === "cli-library-backend" ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <Columns className="w-3.5 h-3.5 inline mr-1" aria-hidden="true" />
                 Split View
@@ -624,7 +644,7 @@ export default function WorkspacePage() {
               </button>
             </div>
 
-            {viewMode === "split" && previewAvailable && (
+            {viewMode === "split" && previewAvailable && projectType === "web" && (
               <Button variant="icon" onClick={() => setIsImmersive(true)} aria-label="Expand split view">
                 <Maximize2 className="w-4 h-4" />
               </Button>
