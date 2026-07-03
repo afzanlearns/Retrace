@@ -6,12 +6,12 @@ const INTRINSIC_WIDTH = 1280;
 const INTRINSIC_HEIGHT = 800;
 
 interface PreviewFrameProps {
-  src: string | undefined;
+  srcdoc: string | null | undefined;
   title: string;
   className?: string;
 }
 
-export function PreviewFrame({ src, title, className }: PreviewFrameProps) {
+export function PreviewFrame({ srcdoc, title, className }: PreviewFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [containerSize, setContainerSize] = useState({ width: INTRINSIC_WIDTH, height: INTRINSIC_HEIGHT });
@@ -34,9 +34,9 @@ export function PreviewFrame({ src, title, className }: PreviewFrameProps) {
 
   return (
     <div ref={containerRef} className={`overflow-hidden relative ${className || ""}`}>
-      {src ? (
+      {srcdoc ? (
         <iframe
-          src={src}
+          srcDoc={srcdoc}
           width={INTRINSIC_WIDTH}
           height={INTRINSIC_HEIGHT}
           style={{
@@ -47,7 +47,7 @@ export function PreviewFrame({ src, title, className }: PreviewFrameProps) {
             left: 0,
           }}
           title={title}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts"
         />
       ) : (
         <div

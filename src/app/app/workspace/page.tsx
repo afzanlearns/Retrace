@@ -40,9 +40,8 @@ import { formatRelativeTime } from "@/lib/utils";
 import {
   isStaticServable,
   getEntryPoint,
-  mimeTypeFromPath,
-  createBlobUrl,
 } from "@/lib/preview";
+import { buildPreviewHtml } from "@/lib/inline-html";
 import { wipeDatabase } from "@/lib/db";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { CommitData, WorkerProgress } from "@/workers/types";
@@ -99,7 +98,7 @@ export default function WorkspacePage() {
   const [replaySpeed, setReplaySpeed] = useState(1);
   const [loop, setLoop] = useState(false);
   const [autoplay, setAutoplay] = useState(true);
-  const [previewFiles, setPreviewFiles] = useState<Map<string, string> | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewAvailable, setPreviewAvailable] = useState(false);
   const [isImmersive, setIsImmersive] = useState(false);
   const [stats, setStats] = useState({
@@ -179,29 +178,25 @@ export default function WorkspacePage() {
 
       if (available && viewMode === "split") {
         const files = await service.serveCommit(sha);
-        const urlMap = new Map<string, string>();
+        const fileMap = new Map<string, Uint8Array>();
         for (const f of files) {
-          const mime = mimeTypeFromPath(f.path);
-          const uint8 = new Uint8Array(f.content);
-          urlMap.set(f.path, createBlobUrl(uint8, mime));
+          fileMap.set(f.path, new Uint8Array(f.content));
         }
-        setPreviewFiles(urlMap);
+        const entryPoint = getEntryPoint(
+          (Array.from(fileMap.keys())).map((p) => ({
+            name: p.split("/").pop() || p,
+            path: p,
+            type: "blob" as const,
+          }))
+        );
+        if (entryPoint) {
+          const html = buildPreviewHtml(entryPoint, fileMap);
+          setPreviewHtml(html);
+        }
       }
     } catch {
       setPreviewAvailable(false);
     }
-  }
-
-  function getPreviewUrl(path: string): string | undefined {
-    if (!previewFiles) return undefined;
-    const direct = previewFiles.get(path);
-    if (direct) return direct;
-    for (const [key, value] of previewFiles) {
-      if (key.endsWith(path) || key === path.replace(/^\//, "")) {
-        return value;
-      }
-    }
-    return undefined;
   }
 
   useEffect(() => {
@@ -235,13 +230,7 @@ export default function WorkspacePage() {
     };
   }, [isPlaying, replaySpeed, loop, commits.length]);
 
-  useEffect(() => {
-    return () => {
-      if (previewFiles) {
-        previewFiles.forEach((url) => URL.revokeObjectURL(url));
-      }
-    };
-  }, [previewFiles]);
+
 
   useEffect(() => {
     if (!isImmersive) return;
@@ -312,16 +301,6 @@ export default function WorkspacePage() {
 
     const previewPanel = (side: "before" | "after") => {
       const isBefore = side === "before";
-      const src = previewAvailable && previewFiles
-        ? getPreviewUrl(getEntryPoint(
-            (Array.from(previewFiles.keys())).map((p) => ({
-              name: p.split("/").pop() || p,
-              path: p,
-              type: "blob" as const,
-            }))
-          ) || "index.html")
-        : undefined;
-
       return (
         <div className="flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-secondary/50 border-b border-border flex-shrink-0">
@@ -335,7 +314,7 @@ export default function WorkspacePage() {
             </span>
           </div>
           <PreviewFrame
-            src={src}
+            srcdoc={previewHtml}
             title={`Live preview ${isBefore ? "before" : "after"} commit`}
             className="bg-white flex-1"
           />
@@ -676,13 +655,7 @@ export default function WorkspacePage() {
                       <span className="text-[10px] text-text-tertiary font-mono mx-auto">{repoName || "localhost"}</span>
                     </div>
                     <PreviewFrame
-                      src={previewAvailable && previewFiles ? getPreviewUrl(getEntryPoint(
-                        (Array.from(previewFiles.keys())).map((p) => ({
-                          name: p.split("/").pop() || p,
-                          path: p,
-                          type: "blob" as const,
-                        }))
-                      ) || "index.html") : undefined}
+                      srcdoc={previewHtml}
                       title="Live preview before commit"
                       className="bg-white"
                     />
@@ -708,13 +681,7 @@ export default function WorkspacePage() {
                       <span className="text-[10px] text-text-tertiary font-mono mx-auto">{repoName || "localhost"}</span>
                     </div>
                     <PreviewFrame
-                      src={previewAvailable && previewFiles ? getPreviewUrl(getEntryPoint(
-                        (Array.from(previewFiles.keys())).map((p) => ({
-                          name: p.split("/").pop() || p,
-                          path: p,
-                          type: "blob" as const,
-                        }))
-                      ) || "index.html") : undefined}
+                      srcdoc={previewHtml}
                       title="Live preview after commit"
                       className="bg-white"
                     />
