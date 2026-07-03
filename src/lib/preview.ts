@@ -30,7 +30,13 @@ export function isStaticServable(
   // Has a bundler/framework config file → needs build step
   if (hasBundlerConfig) return false;
 
-  // Pure static: index.html, no bundler config (even if package.json exists)
+  // Has JSX or TSX files → needs a compilation/build step
+  const hasJsxOrTsx = tree.some(
+    (e) => e.type === "blob" && (e.name.endsWith(".jsx") || e.name.endsWith(".tsx"))
+  );
+  if (hasJsxOrTsx) return false;
+
+  // Pure static: index.html, no bundler config, no JSX/TSX files
   return true;
 }
 
